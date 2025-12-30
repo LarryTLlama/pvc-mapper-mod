@@ -1,0 +1,41 @@
+{
+	"schemaVersion": 1,
+	"id": "pvc-mapper-mod",
+	"version": "${version}",
+	"name": "PVC Mapper Mod",
+	"description": "This is an example description! Tell everyone what your mod is about!",
+	"authors": [
+		"Me!"
+	],
+	"contact": {
+		"homepage": "https://fabricmc.net/",
+		"sources": "https://github.com/FabricMC/fabric-example-mod"
+	},
+	"license": "CC0-1.0",
+	"icon": "assets/pvc-mapper-mod/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"larrytllama.pvcmappermod.PVCMapperMod"
+		],
+		"client": [
+			"larrytllama.pvcmappermod.PVCMapperModClient"
+		],
+		"fabric-datagen": [
+			"larrytllama.pvcmappermod.PVCMapperModDataGenerator"
+		]
+	},
+	"mixins": [
+		"pvc-mapper-mod.mixins.json",
+		{
+			"config": "pvc-mapper-mod.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.18.3",
+		"minecraft": "~1.21.10",
+		"java": ">=21",
+		"fabric-api": "*"
+	}
+}
