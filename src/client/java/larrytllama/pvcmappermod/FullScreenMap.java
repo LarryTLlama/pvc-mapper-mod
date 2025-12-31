@@ -75,6 +75,14 @@ public class FullScreenMap extends Screen {
         );
     }
 
+    public void navToCoords(int x, int z) {
+        int tilesize = 1 << (17 - zoomlevel);
+        double scale = (double) minimapTileSize / tilesize;
+        this.x = (int)(x - ((this.width/2)/scale));
+        this.z = (int)(z - (((this.height - bottomMapOffset)/2)/scale));
+        onMouseMove(this.x, this.z);
+    }
+
     @Override
     public boolean keyPressed(KeyEvent keyEvent) {
         if (keyEvent.key() == GLFW.GLFW_KEY_ESCAPE) {

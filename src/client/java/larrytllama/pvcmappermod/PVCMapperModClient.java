@@ -16,14 +16,13 @@ public class PVCMapperModClient implements ClientModInitializer {
     public KeyMapping OPEN_MAP = new KeyMapping("pvcmappermod.open_map", GLFW.GLFW_KEY_M,
             Category.register(ResourceLocation.fromNamespaceAndPath("pvcmappermod", "category")));
 
+    public FullScreenMap fsm;
     @Override
     public void onInitializeClient() {
-        // This entrypoint is suitable for setting up client-specific logic, such as
-        // rendering.
-        MapperCmdHandler.register();
 
         // Set up player fetchererer
         PlayerFetchUtils pfu = new PlayerFetchUtils();
+        new MapperCmdHandler(pfu, this);
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
             pfu.startUpdates();
         });
@@ -33,7 +32,7 @@ public class PVCMapperModClient implements ClientModInitializer {
 
         Minimap.attach(pfu);
         OPEN_MAP = KeyBindingHelper.registerKeyBinding(OPEN_MAP);
-        FullScreenMap fsm = FullScreenMap.createScreen(Component.literal("PVC Mapper - Map View"), pfu);
+        fsm = FullScreenMap.createScreen(Component.literal("PVC Mapper - Map View"), pfu);
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             while (OPEN_MAP.consumeClick()) {
                 Minecraft.getInstance().setScreen(fsm);

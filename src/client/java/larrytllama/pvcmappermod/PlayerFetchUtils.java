@@ -297,6 +297,23 @@ public class PlayerFetchUtils {
             return ft;
         }
     }
+
+    public SearchResult[] fetchSearchResults(String query) {
+        try (Scanner scanner = new Scanner(
+            new URI("https://pvc.coolwebsite.uk/api/v2/search/" + query).toURL().openStream(), "UTF-8")) {
+            String out = scanner.useDelimiter("\\A").next();
+            Gson gson = new Gson();
+            return gson.fromJson(out, SearchResult[].class);
+        } catch (FileNotFoundException e) {
+            showToast("Search not available!", "Try again later! :(");
+            return null;
+        } catch (Exception e) {
+            showToast("Mapper Connect Error", "Check your connection and try again later!");
+            System.out.println("Failed to fetch places from PVC Mapper!");
+            System.out.println(e);
+            return null;
+        }
+    }
 }
 
 class CoordPair {
@@ -448,4 +465,13 @@ class AreasFetch {
     String z;
     String createdAt;
     String updatedAt;
+}
+
+class SearchResult {
+    String type;
+    String name;
+    String id;
+    String description;
+    int x;
+    int z;
 }
