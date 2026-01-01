@@ -83,7 +83,7 @@ public class MapperCmdHandler {
                             }
 
                             Minecraft.getInstance().execute(() -> {
-                                context.getSource().sendSuccess(() -> chatMsg, true);
+                                context.getSource().sendSuccess(() -> chatMsg, false);
                             });
                         }
                     });
@@ -134,7 +134,7 @@ public class MapperCmdHandler {
                                 if (dur.toSecondsPart() > 0) timelength += dur.toSecondsPart() + " secs";
                                 response.append(Component.literal(timelength).withStyle(ChatFormatting.RED));
                             }
-                            context.getSource().sendSuccess(() -> response, true);
+                            context.getSource().sendSuccess(() -> response, false);
                             return 1;
                         }
                     }
