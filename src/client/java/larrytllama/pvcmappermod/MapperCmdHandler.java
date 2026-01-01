@@ -1,5 +1,6 @@
 package larrytllama.pvcmappermod;
 
+import java.util.ArrayList;
 import java.util.Scanner;
 import java.util.concurrent.CompletableFuture;
 
@@ -18,6 +19,8 @@ import net.minecraft.network.chat.Style;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.time.Instant;
 
 public class MapperCmdHandler {
 
@@ -107,6 +110,37 @@ public class MapperCmdHandler {
                         })
                     )
                 )
+            );
+
+            dispatcher.register(
+                Commands.literal("afksince").then(Commands.argument("player", StringArgumentType.greedyString())
+                .executes((context) -> {
+                    ArrayList<PlayerFetch> p = pfu.getPlayers();
+                    for (int i = 0; i < p.size(); i++) {
+                        if(p.get(i).name.toLowerCase().contains(StringArgumentType.getString(context, "player").toLowerCase())) {
+                            MutableComponent response = Component.literal(p.get(i).name).withStyle(Style.EMPTY.withColor(ChatFormatting.GREEN));
+                            Instant afkSince = Instant.parse(p.get(i).afksince);
+                            Duration dur = Duration.between(afkSince, Instant.now()).abs();
+                            if(dur.toMinutes() < 2) {
+                                response.append(Component.literal(" is ").withStyle(ChatFormatting.YELLOW));
+                                response.append(Component.literal("NOT AFK").withStyle(ChatFormatting.RED));
+                                response.append(Component.literal(".").withStyle(ChatFormatting.YELLOW));
+                            } else {
+                                response.append(Component.literal(" has been AFK for: ").withStyle(ChatFormatting.YELLOW));
+                                String timelength = "";
+                                if (dur.toDaysPart() > 0) timelength += dur.toDaysPart() + " days, " ;
+                                if (dur.toHoursPart() > 0) timelength += dur.toHoursPart() + " hours, ";
+                                if (dur.toMinutesPart() > 0) timelength += dur.toMinutesPart() + " mins, ";
+                                if (dur.toSecondsPart() > 0) timelength += dur.toSecondsPart() + " secs";
+                                response.append(Component.literal(timelength).withStyle(ChatFormatting.RED));
+                            }
+                            context.getSource().sendSuccess(() -> response, true);
+                            return 1;
+                        }
+                    }
+                    context.getSource().sendFailure(Component.literal("That player was not found online."));
+                    return 1;
+                }))
             );
 
             dispatcher.register(
