@@ -3,15 +3,15 @@
 	"id": "pvc-mapper-mod",
 	"version": "${version}",
 	"name": "PVC Mapper Mod",
-	"description": "This is an example description! Tell everyone what your mod is about!",
+	"description": "Adds minimaps, full maps, search, and more from the PVC Mapper in game!",
 	"authors": [
-		"Me!"
+		"LarryTLlama"
 	],
 	"contact": {
-		"homepage": "https://fabricmc.net/",
-		"sources": "https://github.com/FabricMC/fabric-example-mod"
+		"homepage": "https://pvc.coolwebsite.uk/",
+		"sources": "https://github.com/LarryTLlama/pvc-mapper-mod"
 	},
-	"license": "CC0-1.0",
+	"license": "DWTFYW",
 	"icon": "assets/pvc-mapper-mod/icon.png",
 	"environment": "*",
 	"entrypoints": {
