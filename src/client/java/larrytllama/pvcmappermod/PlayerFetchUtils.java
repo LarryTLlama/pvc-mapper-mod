@@ -31,8 +31,9 @@ import net.minecraft.resources.ResourceLocation;
 
 public class PlayerFetchUtils {
     private ScheduledExecutorService scheduler;
-    private ArrayList<PlayerFetch> playersList;
+    private ArrayList<PlayerFetch> playersList = new ArrayList<PlayerFetch>();
     private ClaimFetch claimsList;
+    private ClaimFetch netherClaimsList;
     public boolean claimsFetched = false;
     public final ResourceLocation OTHER_PLAYERS_OW = ResourceLocation.fromNamespaceAndPath("minecraft",
             "textures/map/decorations/frame.png");
@@ -100,36 +101,73 @@ public class PlayerFetchUtils {
         return claimsList.markers;
     }
 
-    public ArrayList<ClaimMarkers> getClaimsInBounds(int minX, int maxX, int minZ, int maxZ) {
+    public ArrayList<ClaimMarkers> getClaimsInBounds(String dimension, int minX, int maxX, int minZ, int maxZ) {
         ArrayList<ClaimMarkers> claimsInBounds = new ArrayList<ClaimMarkers>();
-        if (claimsList == null) return claimsInBounds;
-        for (int i = 0; i < claimsList.markers.length; i++) {
-            if (claimsList.markers[i].points == null) continue;
-            if (claimsList.markers[i].type.equals("rectangle")) {
-                for (int i2 = 0; i2 < claimsList.markers[i].points.length; i2++) {
-                    if (claimsList.markers[i].points[i2].x > minX &&
-                            claimsList.markers[i].points[i2].x < maxX &&
-                            claimsList.markers[i].points[i2].z > minZ &&
-                            claimsList.markers[i].points[i2].z < maxZ) {
-                                claimsInBounds.add(claimsList.markers[i]);
-                                break;
-                            }
-                }
-            } else if(claimsList.markers[i].type.equals("polygon")) {
-                for (int i2 = 0; i2 < claimsList.markers[i].polygonPoints.length; i2++) {
-                    for (int i3 = 0; i3 < claimsList.markers[i].polygonPoints[i2].length; i3++) {
-                    if (claimsList.markers[i].polygonPoints[i2][i3].x > minX &&
-                            claimsList.markers[i].polygonPoints[i2][i3].x < maxX &&
-                            claimsList.markers[i].polygonPoints[i2][i3].z > minZ &&
-                            claimsList.markers[i].polygonPoints[i2][i3].z < maxZ) {
-                                claimsInBounds.add(claimsList.markers[i]);
-                                break;
-                            }
+        if(dimension.equals("minecraft_overworld")) {
+            if (claimsList == null) return claimsInBounds;
+            for (int i = 0; i < claimsList.markers.length; i++) {
+                if (claimsList.markers[i].points == null) continue;
+                if (claimsList.markers[i].type.equals("rectangle")) {
+                    for (int i2 = 0; i2 < claimsList.markers[i].points.length; i2++) {
+                        if (claimsList.markers[i].points[i2].x > minX &&
+                                claimsList.markers[i].points[i2].x < maxX &&
+                                claimsList.markers[i].points[i2].z > minZ &&
+                                claimsList.markers[i].points[i2].z < maxZ) {
+                                    claimsInBounds.add(claimsList.markers[i]);
+                                    break;
+                                }
                     }
+                } else if(claimsList.markers[i].type.equals("polygon")) {
+                    for (int i2 = 0; i2 < claimsList.markers[i].polygonPoints.length; i2++) {
+                        for (int i3 = 0; i3 < claimsList.markers[i].polygonPoints[i2].length; i3++) {
+                        if (claimsList.markers[i].polygonPoints[i2][i3].x > minX &&
+                                claimsList.markers[i].polygonPoints[i2][i3].x < maxX &&
+                                claimsList.markers[i].polygonPoints[i2][i3].z > minZ &&
+                                claimsList.markers[i].polygonPoints[i2][i3].z < maxZ) {
+                                    claimsInBounds.add(claimsList.markers[i]);
+                                    break;
+                                }
+                        }
+                    }
+                } else {
+                    System.out.println("Unknown claim type: " + claimsList.markers[i].type);
                 }
-            } else {
-                System.out.println("Unknown claim type: " + claimsList.markers[i].type);
             }
+        } else if(dimension.equals("minecraft_the_nether")) {
+            if (netherClaimsList == null) { 
+                System.out.println("No nether claims! :O");
+                return claimsInBounds;
+            }
+            for (int i = 0; i < netherClaimsList.markers.length; i++) {
+                if (netherClaimsList.markers[i].points == null) continue;
+                if (netherClaimsList.markers[i].type.equals("rectangle")) {
+                    for (int i2 = 0; i2 < netherClaimsList.markers[i].points.length; i2++) {
+                        if (netherClaimsList.markers[i].points[i2].x > minX &&
+                                netherClaimsList.markers[i].points[i2].x < maxX &&
+                                netherClaimsList.markers[i].points[i2].z > minZ &&
+                                netherClaimsList.markers[i].points[i2].z < maxZ) {
+                                    claimsInBounds.add(netherClaimsList.markers[i]);
+                                    break;
+                                }
+                    }
+                } else if(netherClaimsList.markers[i].type.equals("polygon")) {
+                    for (int i2 = 0; i2 < netherClaimsList.markers[i].polygonPoints.length; i2++) {
+                        for (int i3 = 0; i3 < netherClaimsList.markers[i].polygonPoints[i2].length; i3++) {
+                        if (netherClaimsList.markers[i].polygonPoints[i2][i3].x > minX &&
+                                netherClaimsList.markers[i].polygonPoints[i2][i3].x < maxX &&
+                                netherClaimsList.markers[i].polygonPoints[i2][i3].z > minZ &&
+                                netherClaimsList.markers[i].polygonPoints[i2][i3].z < maxZ) {
+                                    claimsInBounds.add(netherClaimsList.markers[i]);
+                                    break;
+                                }
+                        }
+                    }
+                } else {
+                    System.out.println("Unknown claim type: " + netherClaimsList.markers[i].type);
+                }
+            }
+        } else {
+            System.out.println("Unknown claimed dimension: " + dimension);
         }
         return claimsInBounds;
     }
@@ -158,6 +196,19 @@ public class PlayerFetchUtils {
                     .registerTypeAdapter(ClaimFetch.class, new ClaimMarkerDeserialize())
                     .create();
             claimsList = gson.fromJson(out, ClaimFetch.class);
+        } catch (Exception e) {
+            //showToast("Mapper Connect Error", "Check your internet connection?");
+            System.out.println("Failed to fetch claims from PVC Mapper!");
+            System.out.println(e);
+        }
+        // Get nether claims too!
+        try (Scanner scanner = new Scanner(new URI("https://pvc.coolwebsite.uk/api/v1/claims/nether").toURL().openStream(),
+                "UTF-8")) {
+            String out = scanner.useDelimiter("\\A").next();
+            Gson gson = new GsonBuilder()
+                    .registerTypeAdapter(ClaimFetch.class, new ClaimMarkerDeserialize())
+                    .create();
+            netherClaimsList = gson.fromJson(out, ClaimFetch.class);
         } catch (Exception e) {
             //showToast("Mapper Connect Error", "Check your internet connection?");
             System.out.println("Failed to fetch claims from PVC Mapper!");

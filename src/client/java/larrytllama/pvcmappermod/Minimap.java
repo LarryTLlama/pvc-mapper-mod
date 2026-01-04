@@ -156,6 +156,7 @@ public class Minimap {
     // Image cache
     private ResourceLocation[] textureLocations = new ResourceLocation[4]; // Each x/y.
     private int[][] tileCoords = new int[4][2]; // Each x/y, each tile coord pair.
+    
     // Zoom level for map
     public int zoomlevel = 8;
     public int minimapTileSize = 80;
@@ -197,6 +198,10 @@ public class Minimap {
             default:
                 return "Unknown World";
         }
+    }
+
+    public String getDimensionNID() {
+        return "minecraft_" + Minecraft.getInstance().level.dimension().location().getPath();
     }
 
     private void renderMinimapTooltip(GuiGraphics context, @Nullable List<String> text) {
@@ -284,8 +289,22 @@ public class Minimap {
         context.blit(RenderPipelines.GUI_TEXTURED, playerTooltipSkin, tooltipX + mcfont.width(text.get(0)) + 1, 8, 40, 8, 8, 8, 64, 64 );
     }
 
+    private String lastDimension = "";
 
     public void render(GuiGraphics context, DeltaTracker tickCounter) {
+        if(!this.lastDimension.equals(getDimensionNID())) {
+            this.lastDimension = getDimensionNID();
+            // Reset image cache
+            textureLocations = new ResourceLocation[4];
+            // Including this one which should never realistically be a value
+            // (Unless PVC's still expanding the map 15000 years later)
+            tileCoords = new int[][] {
+                { Integer.MIN_VALUE, Integer.MIN_VALUE },
+                { Integer.MIN_VALUE, Integer.MIN_VALUE },
+                { Integer.MIN_VALUE, Integer.MIN_VALUE },
+                { Integer.MIN_VALUE, Integer.MIN_VALUE }
+            };
+        }
         boolean tooltipApplied = false;
         Minecraft mc = Minecraft.getInstance();
         int screenwidth = mc.getWindow().getGuiScaledWidth();
@@ -307,8 +326,8 @@ public class Minimap {
                         textureLocations[newArrayIndex] = tempArr[arrayIndex];
                     } else {
                         int indexToSet = newArrayIndex;
-                        String url = String.format("https://pvc.coolwebsite.uk/maps/minecraft_overworld/%d/%d_%d.png",
-                                zoomlevel, i, i2);
+                        String url = String.format("https://pvc.coolwebsite.uk/maps/%s/%d/%d_%d.png",
+                            getDimensionNID(), zoomlevel, i, i2);
                         TextureUtils.fetchRemoteTexture(url, (id) -> {
                             textureLocations[indexToSet] = id;
                         });
@@ -332,8 +351,8 @@ public class Minimap {
                 int minz = tileCoords[0][1] * tilesize;
                 int maxz = (tileCoords[3][1] * tilesize) + tilesize;
                 try (Scanner scanner = new Scanner(new URI(
-                        String.format("https://pvc.coolwebsite.uk/api/v1/fetch/places/minecraft_overworld/%d/%d/%d/%d",
-                                minx, maxx, minz, maxz))
+                        String.format("https://pvc.coolwebsite.uk/api/v1/fetch/places/%s/%d/%d/%d/%d",
+                            getDimensionNID(), minx, maxx, minz, maxz))
                         .toURL().openStream(), "UTF-8")) {
                     String out = scanner.useDelimiter("\\A").next();
                     Gson gson = new Gson();
@@ -500,26 +519,44 @@ public class Minimap {
             // If player isn't in our space, ignore
             if ((player.x > minX && player.x < maxX) && (player.z > minZ && player.z < maxZ)) {
                 // Draw their marker - Sort rotation
-                double offsetFromPlayerX = (x - player.x) * scale;
-                double offsetFromPlayerZ = (z - player.z) * scale;
+                double offsetFromPlayerX;
+                double offsetFromPlayerZ;
                 context.pose().pushMatrix();
+                
+                ResourceLocation playerMarkerChoice;
+                switch (player.world) {
+                    case "minecraft_overworld":
+                        if(getDimensionNID().equals("minecraft_overworld")) {
+                            offsetFromPlayerX = (x - player.x) * scale;
+                            offsetFromPlayerZ = (z - player.z) * scale;
+                        } else {
+                            offsetFromPlayerX = (x - (player.x*8)) * scale;
+                            offsetFromPlayerZ = (z - (player.z*8)) * scale;
+                        }
+                        playerMarkerChoice = OTHER_PLAYERS_OW;
+                        break;
+                    case "minecraft_the_nether":
+                        if(getDimensionNID().equals("minecraft_overworld")) {
+                            offsetFromPlayerX = (x - (player.x/8)) * scale;
+                            offsetFromPlayerZ = (z - (player.z/8)) * scale;
+                        } else {
+                            offsetFromPlayerX = (x - player.x) * scale;
+                            offsetFromPlayerZ = (z - player.z) * scale;
+                        }
+                        playerMarkerChoice = OTHER_PLAYERS_NETHER;
+                        break;
+                    default:
+                        offsetFromPlayerX = (x - player.x) * scale;
+                        offsetFromPlayerZ = (z - player.z) * scale;
+                        playerMarkerChoice = OTHER_PLAYERS_SOMEWHERE;
+                        break;
+                }
+                
                 float translateX = (float) ((topLeftX + (minimapTileSize / 2)) - offsetFromPlayerX);
                 float translateZ = (float) (topLeftZ + (minimapTileSize / 2) - offsetFromPlayerZ);
                 context.pose().translate(translateX, translateZ);
                 context.pose().rotate((float) Math.toRadians(-player.yaw));
                 context.pose().translate(-4, -4);
-                ResourceLocation playerMarkerChoice;
-                switch (player.world) {
-                    case "minecraft_overworld":
-                        playerMarkerChoice = OTHER_PLAYERS_OW;
-                        break;
-                    case "minecraft_the_nether":
-                        playerMarkerChoice = OTHER_PLAYERS_NETHER;
-                        break;
-                    default:
-                        playerMarkerChoice = OTHER_PLAYERS_SOMEWHERE;
-                        break;
-                }
                 // Now draw their marker
                 context.blit(
                         RenderPipelines.GUI_TEXTURED,

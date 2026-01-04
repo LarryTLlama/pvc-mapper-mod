@@ -1,7 +1,9 @@
 package larrytllama.pvcmappermod;
 
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.player.PlayerSkin;
@@ -33,6 +35,7 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Checkbox;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.components.Checkbox.Builder;
+import net.minecraft.client.gui.components.Checkbox.OnValueChange;
 import net.minecraft.client.gui.components.toasts.SystemToast;
 import net.minecraft.client.gui.components.toasts.Toast;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
@@ -124,7 +127,7 @@ public class FullScreenMap extends Screen {
         double worldTop = z;
         double worldRight = x + (this.width / scale);
         double worldBottom = z + (this.height / scale);
-
+        String dimension = currentDimension;
         // Figure out tile no. at top left/bottom right
         int topLeftTileX = Math.floorDiv((int) worldLeft, tilesize) - 1;
         int topLeftTileZ = Math.floorDiv((int) worldTop, tilesize) - 1;
@@ -133,9 +136,9 @@ public class FullScreenMap extends Screen {
 
         int thisZoomLevel = zoomlevel;
         for (int iX = topLeftTileX; iX < bottomRightTileX; iX++) {
-            if(thisZoomLevel != zoomlevel) break;
+            if(thisZoomLevel != zoomlevel && !currentDimension.endsWith(dimension)) break;
             for (int iZ = topLeftTileZ; iZ < bottomRightTileZ; iZ++) {
-                if(thisZoomLevel != zoomlevel) break;
+                if(thisZoomLevel != zoomlevel && !currentDimension.endsWith(dimension)) break;
                 ResourceLocation tile = tiles.get(String.format("%d/%d_%d", thisZoomLevel, iX, iZ));
                 if (tile == null) {
                     final int tileX = iX;
@@ -143,8 +146,8 @@ public class FullScreenMap extends Screen {
                     // Temporarily set to a blurred tile to stop the repeating null
                     tiles.put(String.format("%d/%d_%d", thisZoomLevel, tileX, tileZ), blurredTile);
                     // Make a request for the tile
-                    String url = String.format("https://pvc.coolwebsite.uk/maps/minecraft_overworld/%d/%d_%d.png",
-                            zoomlevel, iX, iZ);
+                    String url = String.format("https://pvc.coolwebsite.uk/maps/%s/%d/%d_%d.png",
+                        dimension, zoomlevel, iX, iZ);
                     TextureUtils.fetchRemoteTexture(url, (id) -> {
                         tiles.put(String.format("%d/%d_%d", thisZoomLevel, tileX, tileZ), id);
                     });
@@ -177,7 +180,7 @@ public class FullScreenMap extends Screen {
                 return;
             }
             System.out.println("Checkbox selected! Finding claims...");
-            shownClaims = pfu.getClaimsInBounds(x, (int) (x + (this.width / scale)), z,
+            shownClaims = pfu.getClaimsInBounds(currentDimension, x, (int) (x + (this.width / scale)), z,
                     (int) (z + ((this.height - bottomMapOffset) / scale)));
         } else {
             shownClaims = new ArrayList<ClaimMarkers>();
@@ -200,7 +203,7 @@ public class FullScreenMap extends Screen {
         double scale = (double) minimapTileSize / tilesize;
         CompletableFuture.runAsync(() -> {
             shownFeatures = pfu.fetchFeatures(
-                    "minecraft_overworld",
+                    currentDimension,
                     x,
                     (int) (x + (this.width / scale)),
                     z,
@@ -521,7 +524,7 @@ public class FullScreenMap extends Screen {
     // Heh, eng
     private final ResourceLocation ENG = ResourceLocation.fromNamespaceAndPath("minecraft", "the_end");
 
-    public String currentDimension;
+    public String currentDimension = getDimensionID();
 
     @Override
     public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
@@ -872,6 +875,11 @@ public class FullScreenMap extends Screen {
         }
     }
 
+    public String getDimensionID() {
+        if(Minecraft.getInstance().level == null) return "minecraft_overworld";
+        return "minecraft_" + Minecraft.getInstance().level.dimension().location().getPath();
+    }
+
     @Override
     protected void init() {
         currentDimension = "minecraft_" + Minecraft.getInstance().level.dimension().location().getPath();
@@ -932,9 +940,37 @@ public class FullScreenMap extends Screen {
 
         int checkboxX = this.width - minecraft.font.width("Show Claims") - 25;
         Builder checkboxBuilder = Checkbox.builder(Component.literal("Show Claims"), minecraft.font);
+        checkboxBuilder.onValueChange((checkbox, bl) -> resetClaims());
         claimsCheckbox = checkboxBuilder.pos(checkboxX, this.height - 25).build();
         this.addRenderableWidget(claimsCheckbox);
 
+        Button dimensionButton = Button.builder(
+            Component.literal(pfu.prettyDimensionName(currentDimension)).withStyle(Style.EMPTY.withHoverEvent(new HoverEvent.ShowText(Component.literal("Switch Dimension")))),
+            (btn) -> {
+                if(currentDimension.equals("minecraft_overworld")) {
+                    currentDimension = "minecraft_the_nether";
+                    x = x / 8;
+                    z = z / 8;
+                    btn.setMessage(Component.literal("Nether"));
+                } else if(currentDimension.equals("minecraft_the_nether")) {
+                    x = x * 8;
+                    z = z * 8;
+                    currentDimension = "minecraft_terra2";
+                    btn.setMessage(Component.literal("Terra2"));
+                } else if(currentDimension.equals("minecraft_terra2")) {
+                    currentDimension = "minecraft_overworld";
+                    btn.setMessage(Component.literal("Overworld"));
+                }
+                tiles = new HashMap<String, ResourceLocation>();
+                onMouseMove(x, z);
+            }
+        ).bounds(
+            this.width 
+            - 25 
+            - minecraft.font.width("Overworld") 
+            - minecraft.font.width("Show Claims")
+            - 10, this.height - 26, minecraft.font.width("Overworld") + 5, 20).build();
+        this.addRenderableWidget(dimensionButton);
         int tilesize = 1 << (17 - zoomlevel);
         double scale = (double) minimapTileSize / tilesize;
         x = (int) (-(this.width / scale) / 2);
