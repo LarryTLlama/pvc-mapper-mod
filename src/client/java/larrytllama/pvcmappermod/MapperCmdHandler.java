@@ -7,6 +7,8 @@ import java.util.concurrent.CompletableFuture;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 
+import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
@@ -38,16 +40,16 @@ public class MapperCmdHandler {
 
     public MapperCmdHandler(PlayerFetchUtils pfu, PVCMapperModClient modclient) {
         this.pfu = pfu;
-        CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
+        ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
 
             dispatcher.register(
-                Commands.literal("search")
-                .then(Commands.argument("query", StringArgumentType.greedyString())
+                ClientCommandManager.literal("search")
+                .then(ClientCommandManager.argument("query", StringArgumentType.greedyString())
                 .executes(context -> {
                     String query = StringArgumentType.getString(context, "query");
                     if(query == null || query.length() < 2) {
                         Minecraft.getInstance().execute(() -> {
-                            context.getSource().sendFailure(Component.literal("Your search query '" + query + "' needs to be 3 or more characters long!").withStyle(ChatFormatting.RED));
+                            context.getSource().sendError(Component.literal("Your search query '" + query + "' needs to be 3 or more characters long!").withStyle(ChatFormatting.RED));
                         });
                         return 1;
                     }
@@ -55,10 +57,10 @@ public class MapperCmdHandler {
                         SearchResult[] results = pfu.fetchSearchResults(query);
                         if(results == null) {
                             Minecraft.getInstance().execute(() -> {
-                                context.getSource().sendFailure(Component.literal("Search failed. Try again later!").withStyle(ChatFormatting.RED));
+                                context.getSource().sendError(Component.literal("Search failed. Try again later!").withStyle(ChatFormatting.RED));
                             });
                         } else if(results.length == 0) {
-                            context.getSource().sendFailure(Component.literal("No search results found. Try another search.").withStyle(ChatFormatting.YELLOW));
+                            context.getSource().sendError(Component.literal("No search results found. Try another search.").withStyle(ChatFormatting.YELLOW));
                         } else {
                             MutableComponent chatMsg = Component.literal("PVC Mapper - Search Results\n").withStyle(Style.EMPTY.withColor(ChatFormatting.GOLD).withColor(ChatFormatting.BOLD));
                             chatMsg.append(Component.literal("" + results.length + " results found!\n").withStyle(Style.EMPTY.withColor(ChatFormatting.GRAY).withColor(ChatFormatting.ITALIC)));
@@ -83,7 +85,7 @@ public class MapperCmdHandler {
                             }
 
                             Minecraft.getInstance().execute(() -> {
-                                context.getSource().sendSuccess(() -> chatMsg, false);
+                                context.getSource().sendFeedback(chatMsg);
                             });
                         }
                     });
@@ -94,13 +96,13 @@ public class MapperCmdHandler {
             );
 
             dispatcher.register(
-                Commands.literal("map")
+                ClientCommandManager.literal("map")
                 .executes((context) -> {
                     Minecraft.getInstance().setScreen(modclient.fsm);
                     return 1;
                 })
-                .then(Commands.argument("x", IntegerArgumentType.integer())
-                    .then(Commands.argument("z", IntegerArgumentType.integer())
+                .then(ClientCommandManager.argument("x", IntegerArgumentType.integer())
+                    .then(ClientCommandManager.argument("z", IntegerArgumentType.integer())
                         .executes((context) -> {
                             Minecraft.getInstance().execute(() -> {
                                 Minecraft.getInstance().setScreen(modclient.fsm);
@@ -113,7 +115,7 @@ public class MapperCmdHandler {
             );
 
             dispatcher.register(
-                Commands.literal("afksince").then(Commands.argument("player", StringArgumentType.greedyString())
+                ClientCommandManager.literal("afksince").then(ClientCommandManager.argument("player", StringArgumentType.greedyString())
                 .executes((context) -> {
                     ArrayList<PlayerFetch> p = pfu.getPlayers();
                     for (int i = 0; i < p.size(); i++) {
@@ -134,11 +136,11 @@ public class MapperCmdHandler {
                                 if (dur.toSecondsPart() > 0) timelength += dur.toSecondsPart() + " secs";
                                 response.append(Component.literal(timelength).withStyle(ChatFormatting.RED));
                             }
-                            context.getSource().sendSuccess(() -> response, false);
+                            context.getSource().sendFeedback(response);
                             return 1;
                         }
                     }
-                    context.getSource().sendFailure(Component.literal("That player was not found online."));
+                    context.getSource().sendError(Component.literal("That player was not found online."));
                     return 1;
                 }))
             );
