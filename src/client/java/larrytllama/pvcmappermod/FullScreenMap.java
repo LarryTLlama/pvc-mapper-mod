@@ -1002,9 +1002,5 @@ public class FullScreenMap extends Screen {
         this.addRenderableWidget(posZoomBtn);
         this.addRenderableWidget(searchZoomBtn);
 
-        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
-            executor.shutdownNow();
-        });
-
     }
 }
