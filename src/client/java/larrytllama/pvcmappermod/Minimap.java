@@ -533,7 +533,7 @@ public class Minimap {
         for (int i = 0; i < playersList.size(); i++) {
             PlayerFetch player = playersList.get(i);
             // If player is us, ignore. We know our whole life story already
-            if(mc.player.getName() == Component.literal(player.name)) continue;
+            if(mc.player.getName().equals(Component.literal(player.name))) continue;
             // If player isn't in our space, ignore
             if ((player.x > minX && player.x < maxX) && (player.z > minZ && player.z < maxZ)) {
                 // Draw their marker - Sort rotation

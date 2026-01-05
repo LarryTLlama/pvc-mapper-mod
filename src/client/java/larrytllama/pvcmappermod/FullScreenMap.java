@@ -320,17 +320,16 @@ public class FullScreenMap extends Screen {
 
     @Override
     public boolean mouseScrolled(double a, double b, double c, double d) {
+        int scroll = (int) Math.signum(d);
+        if (scroll == 0) return super.mouseScrolled(a, b, c, d);
         // Get current middle
         int oldtilesize = 1 << (17 - zoomlevel);
         double oldscale = (double) minimapTileSize / oldtilesize;
         double oldMiddleX = (this.width / 2) / oldscale;
         double oldMiddleZ = (this.height / 2) / oldscale;
         // Move to new zoom level
-        zoomlevel += d;
-        if (zoomlevel > maxZoomLevel)
-            zoomlevel = maxZoomLevel;
-        if (zoomlevel < minZoomLevel)
-            zoomlevel = minZoomLevel;
+        zoomlevel += scroll;;
+        zoomlevel = Math.max(minZoomLevel, Math.min(maxZoomLevel, zoomlevel));
         // Set position to new x/z
         int newtilesize = 1 << (17 - zoomlevel);
         double newscale = (double) minimapTileSize / newtilesize;
