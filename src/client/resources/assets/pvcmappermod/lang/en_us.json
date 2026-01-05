@@ -1,4 +1,6 @@
 {
     "pvcmappermod.open_map": "Open Full Map",
-    "key.category.pvcmappermod.category": "PVC Mapper Mod"
+    "key.category.pvcmappermod.category": "PVC Mapper Mod",
+    "pvcmappermod.minimap_zoom_in": "Zoom in Minimap",
+    "pvcmappermod.minimap_zoom_out": "Zoom out Minimap"
 }

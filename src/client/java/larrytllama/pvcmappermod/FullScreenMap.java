@@ -128,7 +128,7 @@ public class FullScreenMap extends Screen {
         double worldTop = z;
         double worldRight = x + (this.width / scale);
         double worldBottom = z + (this.height / scale);
-        String dimension = currentDimension;
+        String dimension = currentDimension + "";
         // Figure out tile no. at top left/bottom right
         int topLeftTileX = Math.floorDiv((int) worldLeft, tilesize) - 1;
         int topLeftTileZ = Math.floorDiv((int) worldTop, tilesize) - 1;
@@ -137,9 +137,9 @@ public class FullScreenMap extends Screen {
 
         int thisZoomLevel = zoomlevel;
         for (int iX = topLeftTileX; iX < bottomRightTileX; iX++) {
-            if(thisZoomLevel != zoomlevel && !currentDimension.endsWith(dimension)) break;
+            if(thisZoomLevel != zoomlevel && !currentDimension.equals(dimension)) break;
             for (int iZ = topLeftTileZ; iZ < bottomRightTileZ; iZ++) {
-                if(thisZoomLevel != zoomlevel && !currentDimension.endsWith(dimension)) break;
+                if(thisZoomLevel != zoomlevel && !currentDimension.equals(dimension)) break;
                 ResourceLocation tile = tiles.get(String.format("%d/%d_%d", thisZoomLevel, iX, iZ));
                 if (tile == null) {
                     final int tileX = iX;
@@ -405,10 +405,17 @@ public class FullScreenMap extends Screen {
                 }
 
             }
+
+            // Set text to draw coords to 
+            currentLocationCoordinates = Component.literal(String.format("%d, %d", (int) (x + (mouseX / scale)), (int) (z + (mouseY / scale))));
+        } else {
+            Component.literal("--, --");
         }
 
         super.mouseMoved(mouseX, mouseY);
     }
+
+    public MutableComponent currentLocationCoordinates = Component.literal("--, --");
 
     @Override
     public boolean mouseClicked(MouseButtonEvent mbe, boolean bl) {
@@ -812,6 +819,13 @@ public class FullScreenMap extends Screen {
                     }
                 }
             }
+
+
+            MutableComponent coords = currentLocationCoordinates;
+            if(coords == null) coords = Component.literal("--, --");
+            context.fill(2, this.height - bottomMapOffset - minecraft.font.lineHeight - 4, 6 + minecraft.font.width(coords.getString()), this.height - bottomMapOffset - 1, 0xB0000000);
+            context.drawString(minecraft.font, currentLocationCoordinates, 4, this.height - bottomMapOffset - minecraft.font.lineHeight - 2, 0xFFFFFFFF);
+
             context.scissorStack.pop();
 
             // Tooltips
@@ -948,14 +962,18 @@ public class FullScreenMap extends Screen {
         Button dimensionButton = Button.builder(
             Component.literal(pfu.prettyDimensionName(currentDimension)).withStyle(Style.EMPTY.withHoverEvent(new HoverEvent.ShowText(Component.literal("Switch Dimension")))),
             (btn) -> {
+                int tilesize = 1 << (17 - zoomlevel);
+                double scale = (double) minimapTileSize / tilesize;
                 if(currentDimension.equals("minecraft_overworld")) {
                     currentDimension = "minecraft_the_nether";
-                    x = x / 8;
-                    z = z / 8;
+                    // Going from OW to N
+                    x = (int)(x - ((this.width / 2)*scale));
+                    z = (int)(z - ((this.height / 2)*scale));
                     btn.setMessage(Component.literal("Nether"));
                 } else if(currentDimension.equals("minecraft_the_nether")) {
-                    x = x * 8;
-                    z = z * 8;
+                    // Going from N to OW
+                    x = (int)(x - ((this.width / 2)*scale));
+                    z = (int)(z - ((this.height / 2)*scale));
                     currentDimension = "minecraft_terra2";
                     btn.setMessage(Component.literal("Terra2"));
                 } else if(currentDimension.equals("minecraft_terra2")) {
@@ -964,6 +982,7 @@ public class FullScreenMap extends Screen {
                 }
                 tiles = new HashMap<String, ResourceLocation>();
                 onMouseMove(x, z);
+                resetFeatures();
             }
         ).bounds(
             this.width 

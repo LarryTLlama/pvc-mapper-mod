@@ -143,7 +143,7 @@ public class MapperCmdHandler {
                 }))
             );
 
-            dispatcher.register(
+            /*dispatcher.register(
                 Commands.literal("mapper_fetch")
                 .then(Commands.argument("type", StringArgumentType.string())
                 .then(Commands.argument("id", StringArgumentType.string())
@@ -170,7 +170,7 @@ public class MapperCmdHandler {
                     }
                     return 1;
                 })
-            )));
+            )));*/
         });
     }
 }
