@@ -74,12 +74,15 @@ class PlaceFetch {
 
 public class Minimap {
 
-    private PlayerFetchUtils pfu;
-    public static void attach(PlayerFetchUtils pfu) {
+    public PlayerFetchUtils pfu;
+    public SettingsProvider sp;
+    public static Minimap attach(PlayerFetchUtils pfu, SettingsProvider sp) {
         Minimap minimap = new Minimap();
         minimap.pfu = pfu;
+        minimap.sp = sp;
         HudElementRegistry.attachElementBefore(VanillaHudElements.CHAT,
                 ResourceLocation.fromNamespaceAndPath("larrytllama.pvcmappermod", "before_chat"), minimap::render);
+        return minimap;
     }
 
     private boolean hasNotBeenInitialisedYet = true;
@@ -99,6 +102,9 @@ public class Minimap {
     private String highlightedPlace;
 
     private void sendPlayerListFeedback() {
+        
+        // Calculate tile size from zoom
+        int tilesize = 1 << (17 - zoomlevel);
         MutableComponent message = Component.literal("PVC Mapper Minimap\n").withStyle(ChatFormatting.GREEN,
                 ChatFormatting.ITALIC);
         Minecraft instance = Minecraft.getInstance();
@@ -160,8 +166,6 @@ public class Minimap {
     // Zoom level for map
     public int zoomlevel = 8;
     public int minimapTileSize = 80;
-    // Calculate tile size from zoom
-    private int tilesize = 1 << (17 - zoomlevel);
     public static final ResourceLocation PLAYER = ResourceLocation.fromNamespaceAndPath("minecraft",
             "textures/map/decorations/player.png");
     public static final ResourceLocation OTHER_PLAYERS_OW = ResourceLocation.fromNamespaceAndPath("minecraft",
@@ -291,6 +295,19 @@ public class Minimap {
 
     private String lastDimension = "";
 
+    public void resetTileImageCache() {
+        // Reset image cache
+        textureLocations = new ResourceLocation[4];
+        // Including this one which should never realistically be a value
+        // (Unless PVC's still expanding the map 15000 years later)
+        tileCoords = new int[][] {
+            { Integer.MIN_VALUE, Integer.MIN_VALUE },
+            { Integer.MIN_VALUE, Integer.MIN_VALUE },
+            { Integer.MIN_VALUE, Integer.MIN_VALUE },
+            { Integer.MIN_VALUE, Integer.MIN_VALUE }
+        };
+    }
+
     public void render(GuiGraphics context, DeltaTracker tickCounter) {
         if(!this.lastDimension.equals(getDimensionNID())) {
             this.lastDimension = getDimensionNID();
@@ -310,7 +327,8 @@ public class Minimap {
         int screenwidth = mc.getWindow().getGuiScaledWidth();
         double x = mc.player.getX();
         double z = mc.player.getZ();
-
+        // Calculate tile size from zoom
+        int tilesize = 1 << (17 - zoomlevel);
         // Make sure negative tiles start at -1 not -0
         // -256 to work with our 2x2 grid moving minimap
         int divX = Math.floorDiv((int) (x) - 256, tilesize);
@@ -530,15 +548,15 @@ public class Minimap {
                             offsetFromPlayerX = (x - player.x) * scale;
                             offsetFromPlayerZ = (z - player.z) * scale;
                         } else {
-                            offsetFromPlayerX = (x - (player.x*8)) * scale;
-                            offsetFromPlayerZ = (z - (player.z*8)) * scale;
+                            offsetFromPlayerX = (x - (player.x/8)) * scale;
+                            offsetFromPlayerZ = (z - (player.z/8)) * scale;
                         }
                         playerMarkerChoice = OTHER_PLAYERS_OW;
                         break;
                     case "minecraft_the_nether":
                         if(getDimensionNID().equals("minecraft_overworld")) {
-                            offsetFromPlayerX = (x - (player.x/8)) * scale;
-                            offsetFromPlayerZ = (z - (player.z/8)) * scale;
+                            offsetFromPlayerX = (x - (player.x*8)) * scale;
+                            offsetFromPlayerZ = (z - (player.z*8)) * scale;
                         } else {
                             offsetFromPlayerX = (x - player.x) * scale;
                             offsetFromPlayerZ = (z - player.z) * scale;

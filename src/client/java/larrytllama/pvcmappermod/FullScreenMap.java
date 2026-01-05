@@ -58,10 +58,11 @@ public class FullScreenMap extends Screen {
     public String overlayImageStatus;
     public ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
     private boolean isMouseDown = false;
-
-    public static FullScreenMap createScreen(Component title, PlayerFetchUtils pfu) {
+    public SettingsProvider sp;
+    public static FullScreenMap createScreen(Component title, PlayerFetchUtils pfu, SettingsProvider sp) {
         FullScreenMap fsm = new FullScreenMap(title);
         fsm.pfu = pfu;
+        fsm.sp = sp;
         return fsm;
     }
 
@@ -924,7 +925,7 @@ public class FullScreenMap extends Screen {
         Button searchZoomBtn = Button.builder(Component.nullToEmpty(" "), (btn) -> {
             minecraft.setScreen(new ChatScreen("/search ", false));
         }).bounds(this.width - 25, 5, 20, 20).tooltip(Tooltip.create(Component.literal("Search PVC Mapper"))).build();
-
+        
         // Add sponsor banner code here
         CompletableFuture.runAsync(() -> {
             SponsorBanner banner = SponsorUtils.getBanner();

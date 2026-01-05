@@ -13,13 +13,17 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
 public class PVCMapperModClient implements ClientModInitializer {
-    public KeyMapping OPEN_MAP = new KeyMapping("pvcmappermod.open_map", GLFW.GLFW_KEY_M,
-            Category.register(ResourceLocation.fromNamespaceAndPath("pvcmappermod", "category")));
+    public Category MOD_CATEGORY = Category.register(ResourceLocation.fromNamespaceAndPath("pvcmappermod", "category"));
+    public KeyMapping OPEN_MAP = new KeyMapping("pvcmappermod.open_map", GLFW.GLFW_KEY_M, MOD_CATEGORY);
+    public KeyMapping MINIMAP_ZOOM_IN = new KeyMapping("pvcmappermod.minimap_zoom_in", GLFW.GLFW_KEY_EQUAL, MOD_CATEGORY);
+    public KeyMapping MINIMAP_ZOOM_OUT = new KeyMapping("pvcmappermod.minimap_zoom_out", GLFW.GLFW_KEY_MINUS, MOD_CATEGORY);
 
     public FullScreenMap fsm;
+    public Minimap minimap;
     @Override
     public void onInitializeClient() {
-
+        // Settings provider
+        SettingsProvider sp = new SettingsProvider();
         // Set up player fetchererer
         PlayerFetchUtils pfu = new PlayerFetchUtils();
         new MapperCmdHandler(pfu, this);
@@ -30,12 +34,29 @@ public class PVCMapperModClient implements ClientModInitializer {
             pfu.stopUpdates();
         });
 
-        Minimap.attach(pfu);
+
+        this.minimap = Minimap.attach(pfu, sp);
         OPEN_MAP = KeyBindingHelper.registerKeyBinding(OPEN_MAP);
-        fsm = FullScreenMap.createScreen(Component.literal("PVC Mapper - Map View"), pfu);
+        MINIMAP_ZOOM_IN = KeyBindingHelper.registerKeyBinding(MINIMAP_ZOOM_IN);
+        MINIMAP_ZOOM_OUT = KeyBindingHelper.registerKeyBinding(MINIMAP_ZOOM_OUT);
+        fsm = FullScreenMap.createScreen(Component.literal("PVC Mapper - Map View"), pfu, sp);
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             while (OPEN_MAP.consumeClick()) {
                 Minecraft.getInstance().setScreen(fsm);
+            }
+
+            while(MINIMAP_ZOOM_IN.consumeClick()) {
+                if(this.minimap.zoomlevel != 8) {
+                    this.minimap.zoomlevel += 1;
+                    this.minimap.resetTileImageCache();
+                }
+            }
+
+            while(MINIMAP_ZOOM_OUT.consumeClick()) {
+                if(this.minimap.zoomlevel != 1) {
+                    this.minimap.zoomlevel -= 1;
+                    this.minimap.resetTileImageCache();
+                }
             }
         });
     }
