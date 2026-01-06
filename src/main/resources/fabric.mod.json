@@ -11,7 +11,7 @@
 		"homepage": "https://pvc.coolwebsite.uk/",
 		"sources": "https://github.com/LarryTLlama/pvc-mapper-mod"
 	},
-	"license": "DWTFYW",
+	"license": "WTFPL",
 	"icon": "assets/pvc-mapper-mod/icon.png",
 	"environment": "client",
 	"entrypoints": {
