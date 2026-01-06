@@ -136,11 +136,15 @@ public class MapperCmdHandler {
                                 if (dur.toSecondsPart() > 0) timelength += dur.toSecondsPart() + " secs";
                                 response.append(Component.literal(timelength).withStyle(ChatFormatting.RED));
                             }
-                            context.getSource().sendFeedback(response);
+                            Minecraft.getInstance().execute(() -> {
+                                context.getSource().sendFeedback(response);
+                            });
                             return 1;
                         }
                     }
-                    context.getSource().sendError(Component.literal("That player was not found online."));
+                    Minecraft.getInstance().execute(() -> {
+                        context.getSource().sendError(Component.literal("That player was not found online."));
+                    });
                     return 1;
                 }))
             );
