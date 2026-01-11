@@ -84,7 +84,7 @@ public class ClothConfigScreen extends Screen {
             .setTooltip(Component.literal("Choose where the big map opens to!"), Component.literal("CENTRE_ON_PLAYER = Open to you"), Component.literal("CENTRE_ON_SPAWN = Open to spawn"), Component.literal("Note: The map will re-open to your last dragged location."))
             .build();
         miscSettings.addEntry(this.bigMapPos);
-        this.checkForUpdates = entryBuilder.startBooleanToggle(Component.literal("Use Darker Tiles"), sp.checkForUpdates)
+        this.checkForUpdates = entryBuilder.startBooleanToggle(Component.literal("Check for Updates"), sp.checkForUpdates)
             .setDefaultValue(true)
             .setTooltip(Component.literal("Check for PVC Mapper Mod updates on Game Launch"), Component.literal("(Displays a non-intrusive popup in the top right to let you know!)"))
             .build();

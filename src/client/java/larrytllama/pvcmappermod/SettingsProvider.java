@@ -98,13 +98,13 @@ public class SettingsProvider {
 }
 
 class SettingsJSON {
-    int miniMapZoom;
-    MiniMapPositions miniMapPos;
-    boolean miniMapEnabled;
-    String mapTileSource;
-    boolean useDarkTiles;
-    BigMapPos bigMapPos;
-    boolean checkForUpdates;
+    int miniMapZoom = 8;
+    MiniMapPositions miniMapPos = MiniMapPositions.TOP_RIGHT;
+    boolean miniMapEnabled = true;
+    String mapTileSource = "https://pvc.coolwebsite.uk/maps/";
+    boolean useDarkTiles = false;
+    BigMapPos bigMapPos = BigMapPos.CENTRE_ON_PLAYER;
+    boolean checkForUpdates = true;
 }
 
 enum MiniMapPositions {
