@@ -5,7 +5,6 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 
 import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.gui.components.toasts.SystemToast;
@@ -20,16 +19,13 @@ public class SettingsProvider {
 
     public MiniMapPositions miniMapPos = MiniMapPositions.TOP_RIGHT;
 
-    public ShowMiniMap miniMapEnabled = ShowMiniMap.IN_PVC_ONLY;
+    public boolean miniMapEnabled = true;
 
-    public MapTileSource mapTileSource = MapTileSource.PVC_MAPPER;
-
-    public DefaultWorld defaultWorld = DefaultWorld.CURRENT;
+    public String mapTileSource = "https://pvc.coolwebsite.uk/maps";
 
     public boolean useDarkTiles = false;
 
     Path path = FabricLoader.getInstance().getConfigDir().resolve("pvcmapper.json");
-
 
     public SettingsProvider() {
         updateSettings();
@@ -39,13 +35,14 @@ public class SettingsProvider {
         Gson gson = new Gson();
         if(Files.exists(path)) {
             try {
+                System.out.println(path.toString());
                 SettingsJSON settingsFromFile = gson.fromJson(Files.readString(path), SettingsJSON.class);
                 miniMapZoom = settingsFromFile.miniMapZoom;
                 miniMapEnabled = settingsFromFile.miniMapEnabled;
                 mapTileSource = settingsFromFile.mapTileSource;
-                defaultWorld = settingsFromFile.defaultWorld;
                 useDarkTiles = settingsFromFile.useDarkTiles;
             } catch(Exception e) {
+                System.out.println(e);
                 new SystemToast(SystemToastId.FILE_DROP_FAILURE, Component.literal("PVC Mapper Settings Error"), Component.literal("Couldn't open the Setting file, check you have permissions to access it!"));
             }
         } else {
@@ -64,15 +61,16 @@ public class SettingsProvider {
     }
 
     public void saveSettings() {
+        System.out.println("Saving settings!");
         Gson gson = new Gson();
         SettingsJSON settingsToSet = new SettingsJSON();
-        settingsToSet.defaultWorld = defaultWorld;
         settingsToSet.mapTileSource = mapTileSource;
         settingsToSet.miniMapEnabled = miniMapEnabled;
         settingsToSet.miniMapPos = miniMapPos;
         settingsToSet.miniMapZoom = miniMapZoom;
         settingsToSet.useDarkTiles = useDarkTiles;
         try {
+            System.out.println("Writing to settings!" + path.getParent().toString());
             Files.createDirectories(path.getParent());
             Files.writeString(
                 path,
@@ -89,9 +87,8 @@ public class SettingsProvider {
 class SettingsJSON {
     int miniMapZoom;
     MiniMapPositions miniMapPos;
-    ShowMiniMap miniMapEnabled;
-    MapTileSource mapTileSource;
-    DefaultWorld defaultWorld;
+    boolean miniMapEnabled;
+    String mapTileSource;
     boolean useDarkTiles;
 }
 
@@ -99,18 +96,3 @@ enum MiniMapPositions {
     TOP_LEFT,
     TOP_RIGHT
 };  
-enum ShowMiniMap {
-    ENABLED,
-    IN_PVC_ONLY,
-    DISABLED
-};
-enum MapTileSource {
-    PVC_DIRECT,
-    PVC_MAPPER
-};
-enum DefaultWorld {
-    CURRENT,
-    OVERWORLD,
-    NETHER,
-    TERRA2
-};

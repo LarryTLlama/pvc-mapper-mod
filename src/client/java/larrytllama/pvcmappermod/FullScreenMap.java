@@ -22,10 +22,6 @@ import java.util.concurrent.TimeUnit;
 import org.lwjgl.glfw.GLFW;
 
 import com.mojang.authlib.GameProfile;
-import com.mojang.blaze3d.vertex.BufferBuilder;
-import com.mojang.blaze3d.vertex.Tesselator;
-
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.minecraft.ChatFormatting;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
@@ -35,11 +31,8 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Checkbox;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.components.Checkbox.Builder;
-import net.minecraft.client.gui.components.Checkbox.OnValueChange;
 import net.minecraft.client.gui.components.toasts.SystemToast;
-import net.minecraft.client.gui.components.toasts.Toast;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
-import net.minecraft.client.gui.render.state.GuiRenderState;
 import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.client.gui.screens.ConfirmLinkScreen;
 import net.minecraft.client.gui.screens.Screen;
@@ -147,8 +140,10 @@ public class FullScreenMap extends Screen {
                     // Temporarily set to a blurred tile to stop the repeating null
                     tiles.put(String.format("%d/%d_%d", thisZoomLevel, tileX, tileZ), blurredTile);
                     // Make a request for the tile
-                    String url = String.format("https://pvc.coolwebsite.uk/maps/%s/%d/%d_%d.png",
-                        dimension, zoomlevel, iX, iZ);
+
+                    String thisDimension = dimension.equals("minecraft_terra2") && sp.useDarkTiles ? "minecraft_terra2_night" : dimension;
+                    String url = String.format("%s%s/%d/%d_%d.png",
+                        sp.mapTileSource, thisDimension, zoomlevel, iX, iZ);
                     TextureUtils.fetchRemoteTexture(url, (id) -> {
                         tiles.put(String.format("%d/%d_%d", thisZoomLevel, tileX, tileZ), id);
                     });
@@ -525,6 +520,8 @@ public class FullScreenMap extends Screen {
 
     private final ResourceLocation searchIcon = ResourceLocation.fromNamespaceAndPath("minecraft",
             "textures/gui/sprites/icon/search.png");
+    private final ResourceLocation settingsIcon = ResourceLocation.fromNamespaceAndPath("pvcmappermod",
+            "textures/gui/settings.png");
 
     private final ResourceLocation OVERWORLD = ResourceLocation.fromNamespaceAndPath("minecraft", "overworld");
     private final ResourceLocation NETHER = ResourceLocation.fromNamespaceAndPath("minecraft", "the_nether");
@@ -880,6 +877,7 @@ public class FullScreenMap extends Screen {
             super.render(context, mouseX, mouseY, delta);
             // Draw on top of buttons
             context.blit(RenderPipelines.GUI_TEXTURED, searchIcon, this.width - 21, 9, 0, 0, 12, 12, 12, 12);
+            context.blit(RenderPipelines.GUI_TEXTURED, settingsIcon, this.width - 21, 34, 0, 0, 12, 12, 12, 12);
 
             // Zoom level number
             context.blit(RenderPipelines.GUI_TEXTURED,
@@ -938,6 +936,9 @@ public class FullScreenMap extends Screen {
         Button searchZoomBtn = Button.builder(Component.nullToEmpty(" "), (btn) -> {
             minecraft.setScreen(new ChatScreen("/search ", false));
         }).bounds(this.width - 25, 5, 20, 20).tooltip(Tooltip.create(Component.literal("Search PVC Mapper"))).build();
+        Button settingsBtn = Button.builder(Component.nullToEmpty(" "), (btn) -> {
+            minecraft.setScreen(ClothConfigScreen.createScreen(sp, this));
+        }).bounds(this.width - 25, 30, 20, 20).tooltip(Tooltip.create(Component.literal("PVC Mapper Mod Settings"))).build();
         
         // Add sponsor banner code here
         CompletableFuture.runAsync(() -> {
@@ -1000,6 +1001,7 @@ public class FullScreenMap extends Screen {
         this.addRenderableWidget(negZoomBtn);
         this.addRenderableWidget(posZoomBtn);
         this.addRenderableWidget(searchZoomBtn);
+        this.addRenderableWidget(settingsBtn);
 
     }
 }

@@ -1,6 +1,5 @@
 package larrytllama.pvcmappermod;
 
-import java.lang.reflect.Array;
 import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
@@ -11,19 +10,12 @@ import java.util.Optional;
 import java.util.Scanner;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-
-import javax.tools.Tool;
 
 import org.jetbrains.annotations.Nullable;
 
 import com.google.gson.Gson;
 import com.mojang.authlib.GameProfile;
-import com.mojang.math.Axis;
 
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
@@ -33,11 +25,9 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.ChatScreen;
-import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipPositioner;
 import net.minecraft.client.gui.screens.inventory.tooltip.TooltipRenderUtil;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.commands.Commands;
-import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
@@ -80,7 +70,7 @@ public class Minimap {
         Minimap minimap = new Minimap();
         minimap.pfu = pfu;
         minimap.sp = sp;
-        HudElementRegistry.attachElementBefore(VanillaHudElements.CHAT,
+        HudElementRegistry.attachElementBefore(VanillaHudElements.STATUS_EFFECTS,
                 ResourceLocation.fromNamespaceAndPath("larrytllama.pvcmappermod", "before_chat"), minimap::render);
         return minimap;
     }
@@ -166,6 +156,7 @@ public class Minimap {
     // Zoom level for map
     public int zoomlevel = 8;
     public int minimapTileSize = 80;
+    
     public static final ResourceLocation PLAYER = ResourceLocation.fromNamespaceAndPath("minecraft",
             "textures/map/decorations/player.png");
     public static final ResourceLocation OTHER_PLAYERS_OW = ResourceLocation.fromNamespaceAndPath("minecraft",
@@ -221,7 +212,12 @@ public class Minimap {
                 maxSize = w;
             }
         }
-        int tooltipX = context.guiWidth() - 100 - maxSize;
+        int tooltipX = -1000;
+        if(sp.miniMapPos == MiniMapPositions.TOP_RIGHT) {
+            tooltipX = context.guiWidth() - 100 - maxSize;
+        } else if(sp.miniMapPos == MiniMapPositions.TOP_LEFT) {
+            tooltipX = 100;
+        }
         TooltipRenderUtil.renderTooltipBackground(
                 context,
                 tooltipX,
@@ -272,7 +268,12 @@ public class Minimap {
                 maxSize = w;
             }
         }
-        int tooltipX = context.guiWidth() - 100 - maxSize;
+        int tooltipX = -1000;
+        if(sp.miniMapPos == MiniMapPositions.TOP_RIGHT) {
+            tooltipX = context.guiWidth() - 100 - maxSize;
+        } else if(sp.miniMapPos == MiniMapPositions.TOP_LEFT) {
+            tooltipX = 100;
+        }
         TooltipRenderUtil.renderTooltipBackground(
                 context,
                 tooltipX,
@@ -309,6 +310,7 @@ public class Minimap {
     }
 
     public void render(GuiGraphics context, DeltaTracker tickCounter) {
+        if(!sp.miniMapEnabled) return;
         if(!this.lastDimension.equals(getDimensionNID())) {
             this.lastDimension = getDimensionNID();
             // Reset image cache
@@ -344,8 +346,9 @@ public class Minimap {
                         textureLocations[newArrayIndex] = tempArr[arrayIndex];
                     } else {
                         int indexToSet = newArrayIndex;
-                        String url = String.format("https://pvc.coolwebsite.uk/maps/%s/%d/%d_%d.png",
-                            getDimensionNID(), zoomlevel, i, i2);
+                        String thisDimension = getDimensionNID().equals("minecraft_terra2") && sp.useDarkTiles ? "minecraft_terra2_night" : getDimensionNID();
+                        String url = String.format("%s%s/%d/%d_%d.png",
+                            sp.mapTileSource, thisDimension, zoomlevel, i, i2);
                         TextureUtils.fetchRemoteTexture(url, (id) -> {
                             textureLocations[indexToSet] = id;
                         });
@@ -387,7 +390,12 @@ public class Minimap {
         // Draw the texture at (10, 10) with a size of 64x64
         // renderLayer, texture, x, y, width, height, u, v, regionWidth, regionHeight,
         // textureWidth, textureHeight
-        int topLeftX = screenwidth - minimapTileSize - 8;
+        int topLeftX;
+        if(sp.miniMapPos == MiniMapPositions.TOP_LEFT) {
+            topLeftX = 8;
+        } else {
+            topLeftX = screenwidth - minimapTileSize - 8;
+        }
         int topLeftZ = 8;
 
         double scale = (double) minimapTileSize / tilesize;
@@ -626,9 +634,15 @@ public class Minimap {
             renderMinimapTooltip(context, List.of("Hover over the minimap's icons", "to view player or place details!"));
         }
 
+        int textCoordinatesPos = -100;
+        if(sp.miniMapPos == MiniMapPositions.TOP_RIGHT) {
+            textCoordinatesPos = screenwidth - 48;
+        } else if(sp.miniMapPos == MiniMapPositions.TOP_LEFT) {
+            textCoordinatesPos = 48;
+        }
         // Add coordinate string beneath minimap
         context.drawCenteredString(mc.font, String.format("%d, %d, %d", mc.player.blockPosition().getX(),
-                mc.player.blockPosition().getY(), mc.player.blockPosition().getZ()), screenwidth - 48, 95, 0xFFFFFFFF);
+                mc.player.blockPosition().getY(), mc.player.blockPosition().getZ()), textCoordinatesPos, 95, 0xFFFFFFFF);
     }
 
 
