@@ -8,6 +8,7 @@ import me.shedaniel.clothconfig2.gui.entries.IntegerSliderEntry;
 import me.shedaniel.clothconfig2.gui.entries.StringListEntry;
 import me.shedaniel.clothconfig2.impl.builders.EnumSelectorBuilder;
 import me.shedaniel.clothconfig2.impl.builders.IntSliderBuilder;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
@@ -68,12 +69,12 @@ public class ClothConfigScreen extends Screen {
         ConfigCategory miscSettings = builder.getOrCreateCategory(Component.literal("Miscellaneous Settings"));
         this.mapTileSource = entryBuilder.startTextField(Component.literal("Tile Source"), sp.mapTileSource)
             .setDefaultValue("https://pvc.coolwebsite.uk/maps/") 
-            .setTooltip(Component.literal("Where the PVC Mapper Mod should get its background tiles from."), Component.literal("If the default isn't working, try: 'https://web.peacefulvanilla.club/maps/tiles/'"))
+            .setTooltip(Component.literal("Where the PVC Mapper Mod should get its background tiles from."), Component.literal("Important! Your URL must include the / at the end!").withStyle(ChatFormatting.RED), Component.literal("If the default isn't working, try: https://web.peacefulvanilla.club/maps/tiles/"))
             .build();
         miscSettings.addEntry(this.mapTileSource);
         this.useDarkTiles = entryBuilder.startBooleanToggle(Component.literal("Use Darker Tiles"), sp.useDarkTiles)
             .setDefaultValue(false)
-            .setTooltip(Component.literal("Only applies to Terra2 tiles: Set the tileset to use the night (dark) mode instead of the default."))
+            .setTooltip(Component.literal("Set the tileset to use the night (dark) mode instead of the default (day)."), Component.literal("Only applies to Terra2 (for now!)"))
             .build();
         miscSettings.addEntry(this.useDarkTiles);
         this.bigMapPos = entryBuilder.startEnumSelector(Component.literal("Big Map Position"), BigMapPos.class, sp.bigMapPos)

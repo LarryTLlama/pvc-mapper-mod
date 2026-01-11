@@ -255,24 +255,28 @@ public class FullScreenMap extends Screen {
                         mbe.x() < ((shownFeatures[i].x - x) * scale) + (itemWidth / 2) &&
                         mbe.y() > ((shownFeatures[i].z - z) * scale) - (minecraft.font.lineHeight / 2) &&
                         mbe.y() < ((shownFeatures[i].z - z) * scale) + (minecraft.font.lineHeight / 2)) {
-                        System.out.println("Feature clicked: " + shownFeatures[i].id);
-                        int index = i;
-                        CompletableFuture.runAsync(() -> {
-                            overlayFeature = pfu.fetchArea(shownFeatures[index].id);
-                            overlayItemID = shownFeatures[index].id;
-                            overlayItemType = "area";
-                            overlayOpen = true;
-                            overlayImage = null;
-                            overlayImageStatus = "Loading...";
-                            if(overlayFeature.area.image != null) {
-                                TextureUtils.fetchRemoteTexture(overlayFeature.area.image, (id) -> {
-                                    overlayImage = id;
+                        if(mbe.hasControlDown()) {
+                            minecraft.setScreen(new ChatScreen(String.format("%s: %d, %d in %s", shownFeatures[i].name, shownFeatures[i].x, shownFeatures[i].z, pfu.prettyDimensionName(currentDimension)), false));
+                        } else {
+                            System.out.println("Feature clicked: " + shownFeatures[i].id);
+                            int index = i;
+                            CompletableFuture.runAsync(() -> {
+                                overlayFeature = pfu.fetchArea(shownFeatures[index].id);
+                                overlayItemID = shownFeatures[index].id;
+                                overlayItemType = "area";
+                                overlayOpen = true;
+                                overlayImage = null;
+                                overlayImageStatus = "Loading...";
+                                if(overlayFeature.area.image != null) {
+                                    TextureUtils.fetchRemoteTexture(overlayFeature.area.image, (id) -> {
+                                        overlayImage = id;
+                                        overlayImageStatus = "No image available";
+                                    });
+                                } else {
                                     overlayImageStatus = "No image available";
-                                });
-                            } else {
-                                overlayImageStatus = "No image available";
-                            }
-                        });
+                                }
+                            });
+                        }
 
                     }
                 } else {
@@ -280,29 +284,35 @@ public class FullScreenMap extends Screen {
                         mbe.x() < ((shownFeatures[i].x - x) * scale) + 4 &&
                         mbe.y() > ((shownFeatures[i].z - z) * scale) - 4 &&
                         mbe.y() < ((shownFeatures[i].z - z) * scale) + 4) {
-                        System.out.println("Feature clicked: " + shownFeatures[i].id);
                         int index = i;
                         switch (shownFeatures[i].featureType) {
                             case "place":
-                                CompletableFuture.runAsync(() -> {
-                                    overlayFeature = pfu.fetchPlace(shownFeatures[index].id);
-                                    overlayItemID = shownFeatures[index].id;
-                                    overlayItemType = "place";
-                                    overlayOpen = true;
-                                    overlayImage = null;
-                                    overlayImageStatus = "Loading...";
-                                    if(overlayFeature.place.images != null) {
-                                        TextureUtils.fetchRemoteTexture(overlayFeature.place.images, (id) -> {
-                                            overlayImage = id;
+                                if(mbe.hasControlDown()) {
+                                    minecraft.setScreen(new ChatScreen(String.format("%s: %d, %d in %s", shownFeatures[i].name, shownFeatures[i].x, shownFeatures[i].z, pfu.prettyDimensionName(currentDimension)), false));
+                                } else {
+                                    CompletableFuture.runAsync(() -> {
+                                        overlayFeature = pfu.fetchPlace(shownFeatures[index].id);
+                                        overlayItemID = shownFeatures[index].id;
+                                        overlayItemType = "place";
+                                        overlayOpen = true;
+                                        overlayImage = null;
+                                        overlayImageStatus = "Loading...";
+                                        if(overlayFeature.place.images != null) {
+                                            TextureUtils.fetchRemoteTexture(overlayFeature.place.images, (id) -> {
+                                                overlayImage = id;
+                                                overlayImageStatus = "No image available";
+                                            });
+                                        } else {
                                             overlayImageStatus = "No image available";
-                                        });
-                                    } else {
-                                        overlayImageStatus = "No image available";
-                                    }
-                                });
+                                        }
+                                    });
+                                }
                                 break;
 
                             case "portal":
+                                if(mbe.hasControlDown()) {
+                                    minecraft.setScreen(new ChatScreen(String.format("%s: %d, %d in %s", pfu.getPortalPrettyName(shownFeatures[i].type), shownFeatures[i].x, shownFeatures[i].z, pfu.prettyDimensionName(currentDimension)), false));
+                                }
                                 break;
                             default:
                                 showToast("Feature view error", "Unknown or unsupported feature type '" + shownFeatures[i].featureType + "'");
@@ -854,7 +864,8 @@ public class FullScreenMap extends Screen {
                 }
                 drawTooltip(context, List.of(
                     Component.literal(placeName).append(Component.literal(" (" + placeId + ")").withStyle(ChatFormatting.GRAY)),
-                    Component.literal(subText).withStyle(ChatFormatting.ITALIC, ChatFormatting.GRAY)),
+                    Component.literal(subText).withStyle(ChatFormatting.ITALIC, ChatFormatting.GRAY),
+                    Component.literal("Ctrl+Click to share Coords").withStyle(ChatFormatting.ITALIC, ChatFormatting.GRAY)),
                     mouseX + 7, mouseY + 4);
             } else if(hoveredClaimIndex != -1 && hoveredClaimIndex < shownClaims.size()) {
                 // And claims

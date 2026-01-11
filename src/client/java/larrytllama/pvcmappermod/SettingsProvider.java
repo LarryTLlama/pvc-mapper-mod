@@ -26,7 +26,7 @@ public class SettingsProvider {
 
     public boolean miniMapEnabled = true;
 
-    public String mapTileSource = "https://pvc.coolwebsite.uk/maps";
+    public String mapTileSource = "https://pvc.coolwebsite.uk/maps/";
 
     public boolean useDarkTiles = false;
 
