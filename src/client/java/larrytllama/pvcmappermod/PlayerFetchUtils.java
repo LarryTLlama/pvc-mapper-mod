@@ -22,8 +22,11 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
+import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.SharedConstants;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.toasts.SystemToast;
+import net.minecraft.client.gui.components.toasts.SystemToast.SystemToastId;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
@@ -363,6 +366,36 @@ public class PlayerFetchUtils {
             return null;
         }
     }
+
+    public void checkForUpdates() {
+        String McVersionName = SharedConstants.getCurrentVersion().name();
+        String MapperModVersionName;
+        try {
+            MapperModVersionName = FabricLoader.getInstance().getModContainer("pvc-mapper-mod").orElseThrow().getMetadata().getVersion().getFriendlyString();
+        } catch(Exception e) {
+            // Just forget it, something weird's going on
+            return;
+        }
+        System.out.println("Checking for updates from https://pvc.coolwebsite.uk/mod/downloads/modversions.json...");
+        System.out.println("Current version: " + McVersionName + ", " + MapperModVersionName);
+        try (Scanner scanner = new Scanner(
+            new URI("https://pvc.coolwebsite.uk/mod/downloads/modversions.json").toURL().openStream(), "UTF-8"
+        )) {
+            String out = scanner.useDelimiter("\\A").next();
+            Gson gson = new Gson();
+            VersionHistory[] vh = gson.fromJson(out, VersionHistory[].class);
+            for (int i = 0; i < vh.length; i++) {
+                if(vh[i].mcVersion.equals(McVersionName)) {
+                    System.out.println("Version for this MC version is found! v" + vh[i].version);
+                    if(!vh[i].version.equals(MapperModVersionName)) {
+                        Minecraft.getInstance().getToastManager().addToast(new SystemToast(SystemToastId.PERIODIC_NOTIFICATION, Component.literal("PVC Mapper Mod Updates"), Component.literal("v" +vh[i].version + " now available! See website for details.")));
+                    }
+                }
+            }
+        } catch (Exception e) {
+            Minecraft.getInstance().getToastManager().addToast(new SystemToast(SystemToastId.PERIODIC_NOTIFICATION, Component.literal("PVC Mapper Mod Error"), Component.literal("Check for updates failed. The Mapper may be down!")));
+        }
+    }
 }
 
 class CoordPair {
@@ -523,4 +556,13 @@ class SearchResult {
     String description;
     int x;
     int z;
+}
+
+class VersionHistory {
+    String version;
+    String mcVersion;
+    String fabricLoaderVersion;
+    String dateReleased;
+    String whatsNew;
+    String url;
 }

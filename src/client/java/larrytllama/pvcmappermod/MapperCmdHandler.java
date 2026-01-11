@@ -60,21 +60,28 @@ public class MapperCmdHandler {
                         } else if(results.length == 0) {
                             context.getSource().sendError(Component.literal("No search results found. Try another search.").withStyle(ChatFormatting.YELLOW));
                         } else {
-                            MutableComponent chatMsg = Component.literal("PVC Mapper - Search Results\n").withStyle(Style.EMPTY.withColor(ChatFormatting.GOLD).withColor(ChatFormatting.BOLD));
-                            chatMsg.append(Component.literal("" + results.length + " results found!\n").withStyle(Style.EMPTY.withColor(ChatFormatting.GRAY).withColor(ChatFormatting.ITALIC)));
-                            chatMsg.append(Component.literal(""));
+                            MutableComponent chatMsg = Component.literal("");
+                            chatMsg.append(Component.literal("PVC Mapper - Search Results\n").withStyle(Style.EMPTY.withColor(ChatFormatting.GOLD).withBold(true)));
+                            chatMsg.append(Component.literal("" + results.length + " results found!\n").withStyle(Style.EMPTY.withColor(ChatFormatting.GRAY).withItalic(true)));
                             for (int i = 0; i < results.length; i++) {
                                 // 1. The place name!
                                 //    It's a such and such
                                 //    Type: place. [View on Map]
-                                chatMsg.append("" + (i+1) + ". ").withStyle(Style.EMPTY.withColor(ChatFormatting.YELLOW));
-                                chatMsg.append(results[i].name + "\n   ");
-                                chatMsg.append(results[i].description + "\n   ");
-                                chatMsg.append("Type: " + results[i].type);
+                                chatMsg.append(Component.literal("" + (i+1) + ". ").withStyle(Style.EMPTY.withColor(ChatFormatting.YELLOW)));
+                                chatMsg.append(Component.literal(results[i].name + "\n   ").withStyle(Style.EMPTY.withColor(ChatFormatting.GOLD)));
+                                chatMsg.append(Component.literal(results[i].description + "\n   ").withStyle(Style.EMPTY.withItalic(true)));
+                                chatMsg.append(Component.literal("Type: " + results[i].type));
                                 if (results[i].type.equals("place") || results[i].type.equals("area")) {
                                     chatMsg.append(
                                         Component.literal(" [View on Map]").withStyle(
                                             Style.EMPTY.withClickEvent(new ClickEvent.RunCommand("map " + results[i].x + " " + results[i].z))
+                                            .withColor(ChatFormatting.GREEN)
+                                        )
+                                    );
+
+                                    chatMsg.append(
+                                        Component.literal(" [Share Coords]").withStyle(
+                                            Style.EMPTY.withClickEvent(new ClickEvent.SuggestCommand(String.format("%s: %d, %d", results[i].name, results[i].x, results[i].z)))
                                             .withColor(ChatFormatting.GREEN)
                                         )
                                     );

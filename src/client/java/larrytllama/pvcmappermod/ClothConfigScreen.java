@@ -28,6 +28,7 @@ public class ClothConfigScreen extends Screen {
     }
 
     private BooleanListEntry showMinimap;
+    private BooleanListEntry checkForUpdates;
     private BooleanListEntry useDarkTiles;
     private StringListEntry mapTileSource;
     private IntegerSliderEntry miniMapZoom;
@@ -44,6 +45,7 @@ public class ClothConfigScreen extends Screen {
             sp.miniMapZoom = this.miniMapZoom.getValue();
             sp.useDarkTiles = this.useDarkTiles.getValue();
             sp.bigMapPos = this.bigMapPos.getValue();
+            sp.checkForUpdates = this.checkForUpdates.getValue();
             sp.saveSettings();
         })
         .setTitle(Component.literal("PVC Mapper Mod Settings"));
@@ -82,6 +84,11 @@ public class ClothConfigScreen extends Screen {
             .setTooltip(Component.literal("Choose where the big map opens to!"), Component.literal("CENTRE_ON_PLAYER = Open to you"), Component.literal("CENTRE_ON_SPAWN = Open to spawn"), Component.literal("Note: The map will re-open to your last dragged location."))
             .build();
         miscSettings.addEntry(this.bigMapPos);
+        this.checkForUpdates = entryBuilder.startBooleanToggle(Component.literal("Use Darker Tiles"), sp.checkForUpdates)
+            .setDefaultValue(true)
+            .setTooltip(Component.literal("Check for PVC Mapper Mod updates on Game Launch"), Component.literal("(Displays a non-intrusive popup in the top right to let you know!)"))
+            .build();
+        miscSettings.addEntry(this.checkForUpdates);
         miscSettings.addEntry(
             entryBuilder.startTextDescription(Component.literal("To change keybinds, head to Options > Controls > Keybinds and scroll down!")).build()
         );
