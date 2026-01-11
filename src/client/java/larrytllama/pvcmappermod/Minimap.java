@@ -34,6 +34,7 @@ import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.PlayerSkin;
+import net.minecraft.world.item.component.ResolvableProfile;
 
 /**
  * Definitions for players api
@@ -247,13 +248,14 @@ public class Minimap {
             uuid.substring(16, 20) + "-" +
             uuid.substring(20)
         );
-        GameProfile profile = new GameProfile(dashed, name);
-        CompletableFuture<Optional<PlayerSkin>> skin = mc.getSkinManager()
-            .get(profile);
-        skin.thenAccept(playerSkin -> {
-            // Fallback to steeeeeeeeeve
-            if(playerSkin.isEmpty()) playerTooltipSkin = ResourceLocation.fromNamespaceAndPath("minecraft","textures/entity/player/wide/steve.png");
-            else playerTooltipSkin = playerSkin.get().body().texturePath();
+        ResolvableProfile resolvable = ResolvableProfile.createUnresolved(dashed);
+        resolvable.resolveProfile(Minecraft.getInstance().services().profileResolver()).thenAccept((resolvedProfile) -> {
+            CompletableFuture<Optional<PlayerSkin>> skin = mc.getSkinManager().get(resolvedProfile);
+            skin.thenAccept(playerSkin -> {
+                // Fallback to steeeeeeeeeve
+                if (playerSkin.isEmpty()) playerTooltipSkin = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/entity/player/wide/steve.png");
+                else playerTooltipSkin = playerSkin.get().body().texturePath();
+            });
         });
     }
 

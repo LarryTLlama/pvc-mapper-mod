@@ -5,8 +5,10 @@ import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.players.ProfileResolver;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.player.PlayerSkin;
+import net.minecraft.world.item.component.ResolvableProfile;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -463,17 +465,16 @@ public class FullScreenMap extends Screen {
                         uuid.substring(12, 16) + "-" +
                         uuid.substring(16, 20) + "-" +
                         uuid.substring(20));
-        GameProfile profile = new GameProfile(dashed, name);
-        CompletableFuture<Optional<PlayerSkin>> skin = mc.getSkinManager()
-                .get(profile);
-        skin.thenAccept(playerSkin -> {
-            // Fallback to steeeeeeeeeve
-            if (playerSkin.isEmpty())
-                hoverPlayerFace = ResourceLocation.fromNamespaceAndPath("minecraft",
-                        "textures/entity/player/wide/steve.png");
-            else
-                hoverPlayerFace = playerSkin.get().body().texturePath();
+        ResolvableProfile resolvable = ResolvableProfile.createUnresolved(dashed);
+        resolvable.resolveProfile(Minecraft.getInstance().services().profileResolver()).thenAccept((resolvedProfile) -> {
+            CompletableFuture<Optional<PlayerSkin>> skin = mc.getSkinManager().get(resolvedProfile);
+            skin.thenAccept(playerSkin -> {
+                // Fallback to steeeeeeeeeve
+                if (playerSkin.isEmpty()) hoverPlayerFace = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/entity/player/wide/steve.png");
+                else hoverPlayerFace = playerSkin.get().body().texturePath();
+            });
         });
+        
     }
 
     public void drawPlayerTooltip(GuiGraphics context, PlayerFetch player, int x, int y) {
