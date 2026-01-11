@@ -48,9 +48,11 @@ public class PVCMapperModClient implements ClientModInitializer {
             if (!seenMainMenu && screen instanceof Screen) {
                 seenMainMenu = true;
                 // Check for updates
-                CompletableFuture.runAsync(() -> {
-                    pfu.checkForUpdates();
-                });
+                if(sp.checkForUpdates) {
+                    CompletableFuture.runAsync(() -> {
+                        pfu.checkForUpdates();
+                    });
+                }
             }
         });
 
