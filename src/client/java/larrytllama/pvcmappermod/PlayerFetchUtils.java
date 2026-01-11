@@ -390,6 +390,7 @@ public class PlayerFetchUtils {
                     if(!vh[i].version.equals(MapperModVersionName)) {
                         Minecraft.getInstance().getToastManager().addToast(new SystemToast(SystemToastId.PERIODIC_NOTIFICATION, Component.literal("PVC Mapper Mod Updates"), Component.literal("v" +vh[i].version + " now available! See website for details.")));
                     }
+                    return;
                 }
             }
         } catch (Exception e) {
