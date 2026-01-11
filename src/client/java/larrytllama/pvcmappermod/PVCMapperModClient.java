@@ -23,7 +23,7 @@ public class PVCMapperModClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         // Settings provider
-        SettingsProvider sp = new SettingsProvider();
+        SettingsProvider sp = SettingsProvider.getInstance();
         // Set up player fetchererer
         PlayerFetchUtils pfu = new PlayerFetchUtils();
         new MapperCmdHandler(pfu, this);

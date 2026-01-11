@@ -56,6 +56,7 @@ public class FullScreenMap extends Screen {
         FullScreenMap fsm = new FullScreenMap(title);
         fsm.pfu = pfu;
         fsm.sp = sp;
+        fsm.zoomlevel = sp.miniMapZoom;
         return fsm;
     }
 
@@ -991,10 +992,15 @@ public class FullScreenMap extends Screen {
             - minecraft.font.width("Show Claims")
             - 10, this.height - 26, minecraft.font.width("Overworld") + 5, 20).build();
         this.addRenderableWidget(dimensionButton);
-        int tilesize = 1 << (17 - zoomlevel);
-        double scale = (double) minimapTileSize / tilesize;
-        x = (int) (-(this.width / scale) / 2);
-        z = (int) (-(this.height / scale) / 2);
+        if(sp.bigMapPos == BigMapPos.CENTRE_ON_SPAWN) {
+            int tilesize = 1 << (17 - zoomlevel);
+            double scale = (double) minimapTileSize / tilesize;
+            x = (int) (-(this.width / scale) / 2);
+            z = (int) (-(this.height / scale) / 2);
+        } else if(sp.bigMapPos == BigMapPos.CENTRE_ON_PLAYER) {
+            x = minecraft.player.getBlockX();
+            z = minecraft.player.getBlockZ();
+        }
         onMouseMove(x, z);
         resetFeatures();
 

@@ -18,6 +18,9 @@
 		"main": [
 			"larrytllama.pvcmappermod.PVCMapperMod"
 		],
+        "modmenu": [
+            "larrytllama.pvcmappermod.ModMenuIntegration"
+        ],
 		"client": [
 			"larrytllama.pvcmappermod.PVCMapperModClient"
 		],

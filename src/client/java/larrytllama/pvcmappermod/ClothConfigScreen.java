@@ -31,6 +31,7 @@ public class ClothConfigScreen extends Screen {
     private StringListEntry mapTileSource;
     private IntegerSliderEntry miniMapZoom;
     private EnumListEntry<MiniMapPositions> miniMapPos;
+    private EnumListEntry<BigMapPos> bigMapPos;
 
     public Screen getClothConfig(Screen parent) {
         ConfigBuilder builder = ConfigBuilder.create()
@@ -41,6 +42,7 @@ public class ClothConfigScreen extends Screen {
             sp.mapTileSource = this.mapTileSource.getValue();
             sp.miniMapZoom = this.miniMapZoom.getValue();
             sp.useDarkTiles = this.useDarkTiles.getValue();
+            sp.bigMapPos = this.bigMapPos.getValue();
             sp.saveSettings();
         })
         .setTitle(Component.literal("PVC Mapper Mod Settings"));
@@ -59,7 +61,7 @@ public class ClothConfigScreen extends Screen {
         minimapSettings.addEntry(this.miniMapPos);
         this.miniMapZoom = entryBuilder.startIntSlider(Component.literal("Minimap Default Zoom"), sp.miniMapZoom, 1, 8)
             .setDefaultValue(8) 
-            .setTooltip(Component.literal("Set the default zoom level of the minimap (when the server loads). 1-8 (8 is the most zoomed in)"))
+            .setTooltip(Component.literal("Set the default zoom level of the minimap (when the server loads)."), Component.literal("8 is the most zoomed in (default)."), Component.literal("1 is the most zoomed out."))
             .build();
         minimapSettings.addEntry(this.miniMapZoom);
 
@@ -74,6 +76,11 @@ public class ClothConfigScreen extends Screen {
             .setTooltip(Component.literal("Only applies to Terra2 tiles: Set the tileset to use the night (dark) mode instead of the default."))
             .build();
         miscSettings.addEntry(this.useDarkTiles);
+        this.bigMapPos = entryBuilder.startEnumSelector(Component.literal("Big Map Position"), BigMapPos.class, sp.bigMapPos)
+            .setDefaultValue(BigMapPos.CENTRE_ON_PLAYER) 
+            .setTooltip(Component.literal("Choose where the big map opens to!"), Component.literal("CENTRE_ON_PLAYER = Open to you"), Component.literal("CENTRE_ON_SPAWN = Open to spawn"), Component.literal("Note: The map will re-open to your last dragged location."))
+            .build();
+        miscSettings.addEntry(this.bigMapPos);
         miscSettings.addEntry(
             entryBuilder.startTextDescription(Component.literal("To change keybinds, head to Options > Controls > Keybinds and scroll down!")).build()
         );

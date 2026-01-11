@@ -273,6 +273,8 @@ public class Minimap {
             tooltipX = context.guiWidth() - 100 - maxSize;
         } else if(sp.miniMapPos == MiniMapPositions.TOP_LEFT) {
             tooltipX = 100;
+        } else {
+            System.out.println("Whoops no minimap pos: " + sp.miniMapPos);
         }
         TooltipRenderUtil.renderTooltipBackground(
                 context,
@@ -580,8 +582,9 @@ public class Minimap {
                 
                 float translateX = (float) ((topLeftX + (minimapTileSize / 2)) - offsetFromPlayerX);
                 float translateZ = (float) (topLeftZ + (minimapTileSize / 2) - offsetFromPlayerZ);
+                context.enableScissor(topLeftX - 4, topLeftZ - 4, topLeftX + minimapTileSize + 4, topLeftZ + minimapTileSize + 4);
                 context.pose().translate(translateX, translateZ);
-                context.pose().rotate((float) Math.toRadians(-player.yaw));
+                context.pose().rotate((float) Math.toRadians(player.yaw - 180));
                 context.pose().translate(-4, -4);
                 // Now draw their marker
                 context.blit(
@@ -591,6 +594,7 @@ public class Minimap {
 
                 context.pose().popMatrix();
 
+                context.disableScissor();
                 // Render tooltip if being hovered
                 if (!tooltipApplied && mouseIsInMap) {
                     if (mouseX > translateX - 4 && mouseX < translateX + 4 && mouseY > translateZ - 4 && mouseY < translateZ + 4) {
@@ -609,6 +613,7 @@ public class Minimap {
             }
 
         }
+
 
         // Get player yaw
         float yawDeg = mc.player.getYRot() + 180f;

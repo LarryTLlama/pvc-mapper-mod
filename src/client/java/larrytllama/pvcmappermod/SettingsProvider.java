@@ -12,6 +12,11 @@ import net.minecraft.client.gui.components.toasts.SystemToast.SystemToastId;
 import net.minecraft.network.chat.Component;
 
 public class SettingsProvider {
+    private static final SettingsProvider INSTANCE = new SettingsProvider();
+
+    public static SettingsProvider getInstance() {
+        return INSTANCE;
+    }
     /**
      * Number 1-8 (inclusive)
      */
@@ -25,6 +30,8 @@ public class SettingsProvider {
 
     public boolean useDarkTiles = false;
 
+    public BigMapPos bigMapPos = BigMapPos.CENTRE_ON_PLAYER;
+
     Path path = FabricLoader.getInstance().getConfigDir().resolve("pvcmapper.json");
 
     public SettingsProvider() {
@@ -37,10 +44,11 @@ public class SettingsProvider {
             try {
                 System.out.println(path.toString());
                 SettingsJSON settingsFromFile = gson.fromJson(Files.readString(path), SettingsJSON.class);
-                miniMapZoom = settingsFromFile.miniMapZoom;
+                if(settingsFromFile.miniMapZoom != 0) miniMapZoom = settingsFromFile.miniMapZoom;
                 miniMapEnabled = settingsFromFile.miniMapEnabled;
-                mapTileSource = settingsFromFile.mapTileSource;
+                if(settingsFromFile.mapTileSource != null) mapTileSource = settingsFromFile.mapTileSource;
                 useDarkTiles = settingsFromFile.useDarkTiles;
+                if(settingsFromFile.bigMapPos != null) bigMapPos = settingsFromFile.bigMapPos;
             } catch(Exception e) {
                 System.out.println(e);
                 new SystemToast(SystemToastId.FILE_DROP_FAILURE, Component.literal("PVC Mapper Settings Error"), Component.literal("Couldn't open the Setting file, check you have permissions to access it!"));
@@ -69,6 +77,7 @@ public class SettingsProvider {
         settingsToSet.miniMapPos = miniMapPos;
         settingsToSet.miniMapZoom = miniMapZoom;
         settingsToSet.useDarkTiles = useDarkTiles;
+        settingsToSet.bigMapPos = bigMapPos;
         try {
             System.out.println("Writing to settings!" + path.getParent().toString());
             Files.createDirectories(path.getParent());
@@ -90,9 +99,15 @@ class SettingsJSON {
     boolean miniMapEnabled;
     String mapTileSource;
     boolean useDarkTiles;
+    BigMapPos bigMapPos;
 }
 
 enum MiniMapPositions {
     TOP_LEFT,
     TOP_RIGHT
+};  
+
+enum BigMapPos {
+    CENTRE_ON_PLAYER,
+    CENTRE_ON_SPAWN
 };  
