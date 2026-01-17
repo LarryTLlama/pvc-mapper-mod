@@ -63,7 +63,7 @@ public class PVCMapperModClient implements ClientModInitializer {
         fsm = FullScreenMap.createScreen(Component.literal("PVC Mapper - Map View"), pfu, sp);
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             while (OPEN_MAP.consumeClick()) {
-                this.fsm.resetTiles();
+                //this.fsm.resetTiles();
                 Minecraft.getInstance().setScreen(fsm);
             }
 

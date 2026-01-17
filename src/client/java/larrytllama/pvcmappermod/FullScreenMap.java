@@ -128,7 +128,7 @@ public class FullScreenMap extends Screen {
         double worldTop = z;
         double worldRight = x + (this.width / scale);
         double worldBottom = z + (this.height / scale);
-        String dimension = currentDimension + "";
+        String dimension = "" + currentDimension;
         // Figure out tile no. at top left/bottom right
         int topLeftTileX = Math.floorDiv((int) worldLeft, tilesize) - 1;
         int topLeftTileZ = Math.floorDiv((int) worldTop, tilesize) - 1;
@@ -140,19 +140,18 @@ public class FullScreenMap extends Screen {
             if(thisZoomLevel != zoomlevel && !currentDimension.equals(dimension)) break;
             for (int iZ = topLeftTileZ; iZ < bottomRightTileZ; iZ++) {
                 if(thisZoomLevel != zoomlevel && !currentDimension.equals(dimension)) break;
-                ResourceLocation tile = tiles.get(String.format("%d/%d_%d", thisZoomLevel, iX, iZ));
+                ResourceLocation tile = tiles.get(String.format("%s/%d/%d_%d", dimension, thisZoomLevel, iX, iZ));
                 if (tile == null) {
                     final int tileX = iX;
                     final int tileZ = iZ;
                     // Temporarily set to a blurred tile to stop the repeating null
-                    tiles.put(String.format("%d/%d_%d", thisZoomLevel, tileX, tileZ), blurredTile);
+                    tiles.put(String.format("%s/%d/%d_%d", dimension, thisZoomLevel, tileX, tileZ), blurredTile);
                     // Make a request for the tile
-
                     String thisDimension = dimension.equals("minecraft_terra2") && sp.useDarkTiles ? "minecraft_terra2_night" : dimension;
                     String url = String.format("%s%s/%d/%d_%d.png",
                         sp.mapTileSource, thisDimension, zoomlevel, iX, iZ);
                     TextureUtils.fetchRemoteTexture(url, (id) -> {
-                        tiles.put(String.format("%d/%d_%d", thisZoomLevel, tileX, tileZ), id);
+                        tiles.put(String.format("%s/%d/%d_%d", dimension, thisZoomLevel, tileX, tileZ), id);
                     });
                 }
             }
@@ -665,7 +664,7 @@ public class FullScreenMap extends Screen {
             context.scissorStack.push(new ScreenRectangle(0, 0, this.width, this.height - bottomMapOffset));
             for (int iX = topLeftTileX; iX < bottomRightTileX; iX++) {
                 for (int iZ = topLeftTileZ; iZ < bottomRightTileZ; iZ++) {
-                    ResourceLocation tile = tiles.get(String.format("%d/%d_%d", zoomlevel, iX, iZ));
+                    ResourceLocation tile = tiles.get(String.format("%s/%d/%d_%d", currentDimension, zoomlevel, iX, iZ));
                     if (tile == null)
                         continue;
                     context.pose().pushMatrix();
@@ -997,7 +996,6 @@ public class FullScreenMap extends Screen {
                     currentDimension = "minecraft_overworld";
                     btn.setMessage(Component.literal("Overworld"));
                 }
-                this.tiles = new HashMap<String, ResourceLocation>();
                 onMouseMove(x, z);
                 resetFeatures();
             }
