@@ -487,8 +487,8 @@ class ClaimFetch {
 }
 
 class FeatureFetch {
-    Integer x;
-    Integer z;
+    float x;
+    float z;
     String name;
     int id;
     String type;
