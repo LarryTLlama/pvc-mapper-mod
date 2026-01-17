@@ -108,6 +108,10 @@ public class FullScreenMap extends Screen {
     public int minimapTileSize = 120;
 
     Map<String, ResourceLocation> tiles = new HashMap<String, ResourceLocation>();
+
+    public void resetTiles() {
+        this.tiles = new HashMap<String, ResourceLocation>();
+    }
     ResourceLocation blurredTile = ResourceLocation.fromNamespaceAndPath("pvcmappermod",
             "textures/gui/tileloading.png");
 
@@ -993,7 +997,7 @@ public class FullScreenMap extends Screen {
                     currentDimension = "minecraft_overworld";
                     btn.setMessage(Component.literal("Overworld"));
                 }
-                tiles = new HashMap<String, ResourceLocation>();
+                this.tiles = new HashMap<String, ResourceLocation>();
                 onMouseMove(x, z);
                 resetFeatures();
             }
