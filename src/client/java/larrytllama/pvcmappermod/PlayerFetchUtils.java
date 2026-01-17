@@ -268,6 +268,7 @@ public class PlayerFetchUtils {
     private final ResourceLocation NETHER_PORTAL =  ResourceLocation.fromNamespaceAndPath("pvcmappermod","textures/gui/portal.png");
     private final ResourceLocation ENDER_CHEST = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/item/ender_eye.png");
     private final ResourceLocation TERRA2_PORTAL = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/gui/sprites/icon/new_realm.png");
+    private final ResourceLocation UNKNOWN_FEATURE = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/gui/sprites/icon/unseen_notification.png");
 
     public ResourceLocation getPortalIcon(String portalType) {
         switch (portalType) {
@@ -278,9 +279,9 @@ public class PlayerFetchUtils {
             case "echest":
                 return ENDER_CHEST;
             case "terra2portal":
-                return ENDER_CHEST;
+                return TERRA2_PORTAL;
             default:
-                return null;
+                return UNKNOWN_FEATURE;
         }
     }
 
