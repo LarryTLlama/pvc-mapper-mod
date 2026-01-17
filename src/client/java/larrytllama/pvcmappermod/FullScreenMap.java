@@ -537,6 +537,8 @@ public class FullScreenMap extends Screen {
             "textures/gui/sprites/icon/search.png");
     private final ResourceLocation settingsIcon = ResourceLocation.fromNamespaceAndPath("pvcmappermod",
             "textures/gui/settings.png");
+    private final ResourceLocation compassIcon = ResourceLocation.fromNamespaceAndPath("minecraft",
+            "textures/item/compass_19.png");
 
     private final ResourceLocation OVERWORLD = ResourceLocation.fromNamespaceAndPath("minecraft", "overworld");
     private final ResourceLocation NETHER = ResourceLocation.fromNamespaceAndPath("minecraft", "the_nether");
@@ -894,6 +896,7 @@ public class FullScreenMap extends Screen {
             // Draw on top of buttons
             context.blit(RenderPipelines.GUI_TEXTURED, searchIcon, this.width - 21, 9, 0, 0, 12, 12, 12, 12);
             context.blit(RenderPipelines.GUI_TEXTURED, settingsIcon, this.width - 21, 34, 0, 0, 12, 12, 12, 12);
+            context.blit(RenderPipelines.GUI_TEXTURED, compassIcon, this.width - 21, this.height - bottomMapOffset - 21, 0, 0, 12, 12, 12, 12);
 
             // Zoom level number
             context.blit(RenderPipelines.GUI_TEXTURED,
@@ -1006,14 +1009,28 @@ public class FullScreenMap extends Screen {
             - minecraft.font.width("Show Claims")
             - 10, this.height - 26, minecraft.font.width("Overworld") + 5, 20).build();
         this.addRenderableWidget(dimensionButton);
+
+        Button goToMe = Button.builder(Component.literal(""), (btn) -> {
+            int tilesize = 1 << (17 - zoomlevel);
+            double scale = (double) minimapTileSize / tilesize;
+            x = (int) (minecraft.player.getBlockX()-(this.width / scale) / 2);
+            z = (int) (minecraft.player.getBlockZ()-(this.height / scale) / 2);
+            onMouseMove(x, z);
+            resetFeatures();
+
+        }).tooltip(Tooltip.create(Component.literal("Go to Current Location"))).bounds(this.width - 25, this.height - bottomMapOffset - 25, 20, 20).build();
+        this.addRenderableWidget(goToMe);
+
         if(sp.bigMapPos == BigMapPos.CENTRE_ON_SPAWN) {
             int tilesize = 1 << (17 - zoomlevel);
             double scale = (double) minimapTileSize / tilesize;
             x = (int) (-(this.width / scale) / 2);
             z = (int) (-(this.height / scale) / 2);
         } else if(sp.bigMapPos == BigMapPos.CENTRE_ON_PLAYER) {
-            x = minecraft.player.getBlockX();
-            z = minecraft.player.getBlockZ();
+            int tilesize = 1 << (17 - zoomlevel);
+            double scale = (double) minimapTileSize / tilesize;
+            x = (int) (minecraft.player.getBlockX()-(this.width / scale) / 2);
+            z = (int) (minecraft.player.getBlockZ()-(this.height / scale) / 2);
         }
         onMouseMove(x, z);
         resetFeatures();
