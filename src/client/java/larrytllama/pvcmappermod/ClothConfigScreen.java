@@ -5,6 +5,7 @@ import me.shedaniel.clothconfig2.api.ConfigEntryBuilder;
 import me.shedaniel.clothconfig2.gui.entries.BooleanListEntry;
 import me.shedaniel.clothconfig2.gui.entries.EnumListEntry;
 import me.shedaniel.clothconfig2.gui.entries.IntegerSliderEntry;
+import me.shedaniel.clothconfig2.gui.entries.LongSliderEntry;
 import me.shedaniel.clothconfig2.gui.entries.StringListEntry;
 import me.shedaniel.clothconfig2.impl.builders.EnumSelectorBuilder;
 import me.shedaniel.clothconfig2.impl.builders.IntSliderBuilder;
@@ -32,6 +33,7 @@ public class ClothConfigScreen extends Screen {
     private BooleanListEntry useDarkTiles;
     private StringListEntry mapTileSource;
     private IntegerSliderEntry miniMapZoom;
+    private LongSliderEntry minimapScale;
     private EnumListEntry<MiniMapPositions> miniMapPos;
     private EnumListEntry<BigMapPos> bigMapPos;
 
@@ -46,6 +48,7 @@ public class ClothConfigScreen extends Screen {
             sp.useDarkTiles = this.useDarkTiles.getValue();
             sp.bigMapPos = this.bigMapPos.getValue();
             sp.checkForUpdates = this.checkForUpdates.getValue();
+            sp.minimapScale = this.minimapScale.getValue() / 100.0;
             sp.saveSettings();
         })
         .setTitle(Component.literal("PVC Mapper Mod Settings"));
@@ -67,6 +70,11 @@ public class ClothConfigScreen extends Screen {
             .setTooltip(Component.literal("Set the default zoom level of the minimap (when the server loads)."), Component.literal("8 is the most zoomed in (default)."), Component.literal("1 is the most zoomed out."))
             .build();
         minimapSettings.addEntry(this.miniMapZoom);
+        this.minimapScale = entryBuilder.startLongSlider(Component.literal("Minimap Scale"), (long) (sp.minimapScale * 100), (long) (1), (long) (200))
+            .setDefaultValue(100) 
+            .setTooltip(Component.literal("Set the size of the minimap"), Component.literal("1% (the min) almost hides the map."), Component.literal("200% (the max) is 2x the original scale."), Component.literal("Note: Minimap mouse hovering is disabled when this isn't set to 100"))
+            .build();
+        minimapSettings.addEntry(this.minimapScale);
 
         ConfigCategory miscSettings = builder.getOrCreateCategory(Component.literal("Miscellaneous Settings"));
         this.mapTileSource = entryBuilder.startTextField(Component.literal("Tile Source"), sp.mapTileSource)

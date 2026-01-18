@@ -314,6 +314,25 @@ public class Minimap {
 
     public void render(GuiGraphics context, DeltaTracker tickCounter) {
         if(!sp.miniMapEnabled) return;
+        // Apply scaling
+        int topLeftX;
+        int screenwidth = Minecraft.getInstance().getWindow().getGuiScaledWidth();
+        if(sp.miniMapPos == MiniMapPositions.TOP_LEFT) {
+            topLeftX = 8;
+        } else {
+            topLeftX = screenwidth - minimapTileSize - 8;
+        }
+        int topLeftZ = 8;
+
+        float cx; 
+        float cy = 0;
+
+        if(sp.miniMapPos == MiniMapPositions.TOP_RIGHT) cx = screenwidth;
+        else cx = 0; 
+        context.pose().pushMatrix();
+        context.pose().translate(cx, cy);
+        context.pose().scale((float)(sp.minimapScale), (float)(sp.minimapScale));
+        context.pose().translate(-cx, -cy);//this.sp.minimapScale, this.sp.minimapScale);
         if(!this.lastDimension.equals(getDimensionNID())) {
             this.lastDimension = getDimensionNID();
             // Reset image cache
@@ -329,7 +348,6 @@ public class Minimap {
         }
         boolean tooltipApplied = false;
         Minecraft mc = Minecraft.getInstance();
-        int screenwidth = mc.getWindow().getGuiScaledWidth();
         double x = mc.player.getX();
         double z = mc.player.getZ();
         // Calculate tile size from zoom
@@ -393,14 +411,7 @@ public class Minimap {
         // Draw the texture at (10, 10) with a size of 64x64
         // renderLayer, texture, x, y, width, height, u, v, regionWidth, regionHeight,
         // textureWidth, textureHeight
-        int topLeftX;
-        if(sp.miniMapPos == MiniMapPositions.TOP_LEFT) {
-            topLeftX = 8;
-        } else {
-            topLeftX = screenwidth - minimapTileSize - 8;
-        }
-        int topLeftZ = 8;
-
+        
         double scale = (double) minimapTileSize / tilesize;
 
         double tileX = Math.floorDiv((long) x, tilesize);
@@ -470,7 +481,7 @@ public class Minimap {
         int mouseX = (int) mx;
         int mouseY = (int) my;
         boolean mouseIsInMap = false;
-        if (mouseX > topLeftX && mouseX < (topLeftX + minimapTileSize) && mouseY > topLeftZ
+        if (sp.minimapScale == 1.0 && mouseX > topLeftX && mouseX < (topLeftX + minimapTileSize) && mouseY > topLeftZ
                 && mouseY < (topLeftZ + minimapTileSize))
             mouseIsInMap = true;
 
@@ -636,7 +647,7 @@ public class Minimap {
         );
         context.pose().popMatrix();
 
-        if(!tooltipApplied && mc.screen instanceof ChatScreen) {
+        if(!tooltipApplied && sp.minimapScale == 1.0 && mc.screen instanceof ChatScreen) {
             renderMinimapTooltip(context, List.of("Hover over the minimap's icons", "to view player or place details!"));
         }
 
@@ -649,6 +660,8 @@ public class Minimap {
         // Add coordinate string beneath minimap
         context.drawCenteredString(mc.font, String.format("%d, %d, %d", mc.player.blockPosition().getX(),
                 mc.player.blockPosition().getY(), mc.player.blockPosition().getZ()), textCoordinatesPos, 95, 0xFFFFFFFF);
+
+        context.pose().popMatrix();
     }
 
 

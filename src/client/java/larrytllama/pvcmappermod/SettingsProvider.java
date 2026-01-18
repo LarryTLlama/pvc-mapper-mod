@@ -32,6 +32,8 @@ public class SettingsProvider {
 
     public boolean checkForUpdates = true;
 
+    public double minimapScale = 1;
+
     public BigMapPos bigMapPos = BigMapPos.CENTRE_ON_PLAYER;
 
     Path path = FabricLoader.getInstance().getConfigDir().resolve("pvcmapper.json");
@@ -46,6 +48,7 @@ public class SettingsProvider {
             try {
                 System.out.println(path.toString());
                 SettingsJSON settingsFromFile = gson.fromJson(Files.readString(path), SettingsJSON.class);
+                if(settingsFromFile.minimapScale != 0.0) minimapScale = settingsFromFile.minimapScale;
                 if(settingsFromFile.miniMapZoom != 0) miniMapZoom = settingsFromFile.miniMapZoom;
                 miniMapEnabled = settingsFromFile.miniMapEnabled;
                 if(settingsFromFile.mapTileSource != null) mapTileSource = settingsFromFile.mapTileSource;
@@ -77,6 +80,7 @@ public class SettingsProvider {
         SettingsJSON settingsToSet = new SettingsJSON();
         settingsToSet.mapTileSource = mapTileSource;
         settingsToSet.miniMapEnabled = miniMapEnabled;
+        settingsToSet.minimapScale = minimapScale;
         settingsToSet.miniMapPos = miniMapPos;
         settingsToSet.miniMapZoom = miniMapZoom;
         settingsToSet.useDarkTiles = useDarkTiles;
@@ -99,6 +103,7 @@ public class SettingsProvider {
 
 class SettingsJSON {
     int miniMapZoom = 8;
+    double minimapScale = 1;
     MiniMapPositions miniMapPos = MiniMapPositions.TOP_RIGHT;
     boolean miniMapEnabled = true;
     String mapTileSource = "https://pvc.coolwebsite.uk/maps/";
