@@ -84,13 +84,13 @@ public class PVCMapperModClient implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register((client) -> {
             if (client.level == null) return;
             inLevelTicks++;
-            if(inLevelTicks == 80) {
+            if(inLevelTicks == 40) {
                 inLevelTicks = 0;
                 // Janky AF Terra2 detector with the tab list (of all things)
                 PlayerTabOverlay tabList = Minecraft.getInstance().gui.getTabList();
                 // Check against IP if in server
                 if( Minecraft.getInstance().getConnection().getServerData() != null && 
-                    Minecraft.getInstance().getConnection().getServerData().ip.contains("peacefulvanilla.club")) {
+                    Minecraft.getInstance().getConnection().getServerData().ip.contains("peacefulvanilla.club")) { // Just in case they change the subdomain
                     // If null, we're in Terra2
                     if(((TabListMixin) tabList).getHeader() == null || ((TabListMixin) tabList).getFooter() == null) {
                         minimap.isInTerra2 = true;
