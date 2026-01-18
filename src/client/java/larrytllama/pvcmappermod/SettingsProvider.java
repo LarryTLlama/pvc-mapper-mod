@@ -50,6 +50,7 @@ public class SettingsProvider {
                 SettingsJSON settingsFromFile = gson.fromJson(Files.readString(path), SettingsJSON.class);
                 if(settingsFromFile.minimapScale != 0.0) minimapScale = settingsFromFile.minimapScale;
                 if(settingsFromFile.miniMapZoom != 0) miniMapZoom = settingsFromFile.miniMapZoom;
+                if(settingsFromFile.miniMapPos != null) miniMapPos = settingsFromFile.miniMapPos;
                 miniMapEnabled = settingsFromFile.miniMapEnabled;
                 if(settingsFromFile.mapTileSource != null) mapTileSource = settingsFromFile.mapTileSource;
                 useDarkTiles = settingsFromFile.useDarkTiles;

@@ -105,8 +105,6 @@ public class PVCMapperModClient implements ClientModInitializer {
                         minimap.isInTerra2 = false;
                     }
                 } else {
-                    System.out.println("Not in PVC - Nooo");
-                    System.out.println("Actually in " + Minecraft.getInstance().getConnection().getServerData());
                     // Just assume they want mondo, I don't care lol
                     minimap.isInQueue = false;
                     minimap.isInTerra2 = false;
