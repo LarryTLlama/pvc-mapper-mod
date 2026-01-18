@@ -4,6 +4,7 @@ import java.util.concurrent.CompletableFuture;
 
 import org.lwjgl.glfw.GLFW;
 
+import larrytllama.pvcmappermod.mixin.client.TabListMixin;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
@@ -11,6 +12,7 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.PlayerTabOverlay;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.client.KeyMapping.Category;
@@ -30,6 +32,7 @@ public class PVCMapperModClient implements ClientModInitializer {
 
     private static boolean seenMainMenu = false;
 
+    private float inLevelTicks = 0;
     @Override
     public void onInitializeClient() {
         // Settings provider
@@ -37,12 +40,7 @@ public class PVCMapperModClient implements ClientModInitializer {
         // Set up player fetchererer
         PlayerFetchUtils pfu = new PlayerFetchUtils();
         new MapperCmdHandler(pfu, this);
-        ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
-            pfu.startUpdates();
-        });
-        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
-            pfu.stopUpdates();
-        });
+        
 
         ScreenEvents.AFTER_INIT.register((client, screen, w, h) -> {
             if (!seenMainMenu && screen instanceof Screen) {
@@ -80,6 +78,50 @@ public class PVCMapperModClient implements ClientModInitializer {
                     this.minimap.resetTileImageCache();
                 }
             }
+        });
+
+
+        ClientTickEvents.END_CLIENT_TICK.register((client) -> {
+            if (client.level == null) return;
+            inLevelTicks++;
+            if(inLevelTicks == 80) {
+                inLevelTicks = 0;
+                // Janky AF Terra2 detector with the tab list (of all things)
+                PlayerTabOverlay tabList = Minecraft.getInstance().gui.getTabList();
+                // Check against IP if in server
+                if( Minecraft.getInstance().getConnection().getServerData() != null && 
+                    Minecraft.getInstance().getConnection().getServerData().ip.contains("peacefulvanilla.club")) {
+                    // If null, we're in Terra2
+                    if(((TabListMixin) tabList).getHeader() == null || ((TabListMixin) tabList).getFooter() == null) {
+                        minimap.isInTerra2 = true;
+                        minimap.isInQueue = false;
+                    // Missing footer text, in Queue
+                    } else if(!((TabListMixin) tabList).getFooter().getString().contains("Visit the website for more info")) {
+                        minimap.isInQueue = true;
+                        minimap.isInTerra2 = false;
+                    // None of the above, in Mondo
+                    } else {
+                        minimap.isInQueue = false;
+                        minimap.isInTerra2 = false;
+                    }
+                } else {
+                    System.out.println("Not in PVC - Nooo");
+                    System.out.println("Actually in " + Minecraft.getInstance().getConnection().getServerData());
+                    // Just assume they want mondo, I don't care lol
+                    minimap.isInQueue = false;
+                    minimap.isInTerra2 = false;
+                }
+                minimap.isLoadingIn = false;
+            }
+        });
+        ClientPlayConnectionEvents.JOIN.register((a, b, c) -> {
+            minimap.isInQueue = false;
+            minimap.isInTerra2 = false;
+            minimap.isLoadingIn = true;
+            pfu.startUpdates();
+        });
+        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
+            pfu.stopUpdates();
         });
     }
 }

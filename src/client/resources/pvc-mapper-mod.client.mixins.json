@@ -3,7 +3,7 @@
 	"package": "larrytllama.pvcmappermod.mixin.client",
 	"compatibilityLevel": "JAVA_21",
 	"client": [
-		"ExampleClientMixin"
+		"TabListMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

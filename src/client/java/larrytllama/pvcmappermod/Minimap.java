@@ -196,7 +196,10 @@ public class Minimap {
     }
 
     public String getDimensionNID() {
-        return "minecraft_" + Minecraft.getInstance().level.dimension().location().getPath();
+        String dimension = "minecraft_" + Minecraft.getInstance().level.dimension().location().getPath();
+        if(isInTerra2 && dimension.equals("minecraft_overworld")) return "minecraft_terra2";
+        else if(isInTerra2) return "minecraft_unknown_world";
+        return dimension;
     }
 
     private void renderMinimapTooltip(GuiGraphics context, @Nullable List<String> text) {
@@ -312,7 +315,17 @@ public class Minimap {
         };
     }
 
+    public boolean isInTerra2 = false;
+    public boolean isInQueue = false;
+    public boolean isLoadingIn = true;
+    private final ResourceLocation trafficLight = ResourceLocation.fromNamespaceAndPath("minecraft",
+            "textures/gui/sprites/realm_status/closed.png");
+    public String[] spinnerParts = {" |", "/", "-", "\\", " |", "/", "-", "\\"};
+    private int spinnerPart = 0;
+
+    private float tickAccumulator = 0f; // Track ticks for stuff
     public void render(GuiGraphics context, DeltaTracker tickCounter) {
+        tickAccumulator += tickCounter.getRealtimeDeltaTicks();
         if(!sp.miniMapEnabled) return;
         // Apply scaling
         int topLeftX;
@@ -333,6 +346,55 @@ public class Minimap {
         context.pose().translate(cx, cy);
         context.pose().scale((float)(sp.minimapScale), (float)(sp.minimapScale));
         context.pose().translate(-cx, -cy);//this.sp.minimapScale, this.sp.minimapScale);
+
+        context.blit(RenderPipelines.GUI_TEXTURED, MAP_BG, topLeftX - 5, topLeftZ - 5, 0, 0, minimapTileSize + 10,
+                minimapTileSize + 10, 16, 16);
+
+        if(isLoadingIn) {
+            Font font = Minecraft.getInstance().font;
+            context.drawCenteredString(font, Component.literal("Loading map"), topLeftX + (minimapTileSize / 2), topLeftZ + (font.lineHeight * 2), 0xFFFFFFFF);
+            if(spinnerPart == 8) spinnerPart = 0;
+            context.drawCenteredString(font, Component.literal("Please Wait " + spinnerParts[spinnerPart]).withStyle(ChatFormatting.BOLD), topLeftX + (minimapTileSize/ 2), topLeftZ + (font.lineHeight * 5), 0xFFFFFFFF);
+            if(tickAccumulator >= 10f) {
+                spinnerPart++;
+                tickAccumulator = 0;
+            }
+            context.pose().popMatrix();
+            return;
+        }
+
+        if(isInQueue) {
+            Font font = Minecraft.getInstance().font;
+            context.drawCenteredString(font, Component.literal("You're in..."), topLeftX + (minimapTileSize / 2), topLeftZ + (font.lineHeight * 2), 0xFFFFFFFF);
+            context.drawCenteredString(font, Component.literal("The Queue").withStyle(ChatFormatting.BOLD), topLeftX + (minimapTileSize / 2), topLeftZ + (font.lineHeight * 3), 0xFFFFFFFF);
+            if(spinnerPart == 8) spinnerPart = 0;
+            context.drawCenteredString(font, Component.literal("Please Wait " + spinnerParts[spinnerPart]).withStyle(ChatFormatting.BOLD), topLeftX + (minimapTileSize/ 2), topLeftZ + (font.lineHeight * 5), 0xFFFFFFFF);
+            
+            if(tickAccumulator >= 10f) {
+                spinnerPart++;
+                tickAccumulator = 0;
+            }
+            context.pose().popMatrix();
+            return;
+        }
+
+        if(getDimensionNID() == "minecraft_unknown_world") {
+            Font font = Minecraft.getInstance().font;
+            context.drawCenteredString(font, Component.literal("No map tiles"), topLeftX + (minimapTileSize/ 2), topLeftZ, 0xFFFFFFFF);
+            context.drawCenteredString(font, Component.literal("available for"), topLeftX + (minimapTileSize/ 2), topLeftZ + font.lineHeight, 0xFFFFFFFF);
+            context.drawCenteredString(font, Component.literal("this world!"), topLeftX + (minimapTileSize/ 2), topLeftZ + (font.lineHeight * 2), 0xFFFFFFFF);
+            int textCoordinatesPos = -100;
+            if(sp.miniMapPos == MiniMapPositions.TOP_RIGHT) {
+                textCoordinatesPos = screenwidth - 48;
+            } else if(sp.miniMapPos == MiniMapPositions.TOP_LEFT) {
+                textCoordinatesPos = 48;
+            }
+            context.drawCenteredString(font, String.format("%d, %d, %d", Minecraft.getInstance().player.blockPosition().getX(),
+                Minecraft.getInstance().player.blockPosition().getY(), Minecraft.getInstance().player.blockPosition().getZ()), textCoordinatesPos, 95, 0xFFFFFFFF);
+            context.pose().popMatrix();
+            return;
+        }
+
         if(!this.lastDimension.equals(getDimensionNID())) {
             this.lastDimension = getDimensionNID();
             // Reset image cache
@@ -425,9 +487,6 @@ public class Minimap {
 
         double viewX = offsetX - (minimapTileSize / 2);
         double viewZ = offsetZ - (minimapTileSize / 2);
-
-        context.blit(RenderPipelines.GUI_TEXTURED, MAP_BG, topLeftX - 5, topLeftZ - 5, 0, 0, minimapTileSize + 10,
-                minimapTileSize + 10, 16, 16);
 
         context.enableScissor(topLeftX, topLeftZ, topLeftX + minimapTileSize, topLeftZ + minimapTileSize);
         // Draw each tile to be visible
