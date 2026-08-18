@@ -257,6 +257,7 @@ public class PVCMapperModClient implements ClientModInitializer {
         };
 
         ClientReceiveMessageEvents.ALLOW_GAME.register((message, overlay) -> {
+            if (Minecraft.getInstance().player == null) return true;
             String text = message.getString();
             if(text.trim().length() == 0) return false;
             if(sp.orwellMeter == OrwellianMeter.FULL_MUTE || sp.orwellMeter == OrwellianMeter.SMART) {
@@ -279,6 +280,7 @@ public class PVCMapperModClient implements ClientModInitializer {
         // Get rid of Orwell to make him angy
         ClientReceiveMessageEvents.MODIFY_GAME.register((message, overlay) -> {
             if(sp.orwellMeter == OrwellianMeter.ALL) return message;
+            if (Minecraft.getInstance().player == null) return message;
             // Orwell message types:
             
             String text = message.getString();
@@ -297,15 +299,21 @@ public class PVCMapperModClient implements ClientModInitializer {
                         return message;
                     }
                 }
+                if(pfu.omc == null) return message;
                 for (int i = 0; i < pfu.omc.length; i++) {
+                    if(pfu.omc[i] == null || pfu.omc[i].includes == null) continue;
                     if(text.contains(pfu.omc[i].includes)) {
                         String otherplayer = "player";
                         for (String word : text.split("\\s+")) {
-                            if(word.startsWith("@")) otherplayer = word.substring(1);
+                            if(word.startsWith("@") && word.length() > 1) {
+                                otherplayer = word.substring(1);
+                                break;
+                            }
                         }
                         if(sp.orwellMeter == OrwellianMeter.SMART) {
+                            if(pfu.omc[i].replacewith == null) continue;
                             String outputtext = pfu.omc[i].replacewith
-                                .replaceAll("%player", Minecraft.getInstance().player.getPlainTextName())
+                                .replaceAll("%player%", Minecraft.getInstance().player.getPlainTextName())
                                 .replaceAll("%otherplayer%", otherplayer);
                             if(pfu.omc[i].important) {
                                 return orwellMessagePrefixes[applicablePrefix].append(Component.literal(outputtext).withStyle(Style.EMPTY)).withStyle(Style.EMPTY.withHoverEvent(new HoverEvent.ShowText(Component.literal("Original message content:\n").append(message))));
@@ -313,8 +321,9 @@ public class PVCMapperModClient implements ClientModInitializer {
                                 return Component.literal(outputtext).withStyle(Style.EMPTY.withColor(ChatFormatting.DARK_GRAY).withItalic(true).withHoverEvent(new HoverEvent.ShowText(Component.literal("Original message content:\n").append(message))));
                             }
                         } else if(sp.orwellMeter == OrwellianMeter.ANGY) {
+                            if(pfu.omc[i].angyreplace == null) continue;
                             String outputtext = pfu.omc[i].angyreplace
-                                .replaceAll("%player", Minecraft.getInstance().player.getPlainTextName())
+                                .replaceAll("%player%", Minecraft.getInstance().player.getPlainTextName())
                                 .replaceAll("%otherplayer%", otherplayer);
                             return orwellMessagePrefixes[applicablePrefix].append(Component.literal(outputtext).withStyle(Style.EMPTY)).withStyle(Style.EMPTY.withHoverEvent(new HoverEvent.ShowText(Component.literal("Original message content:\n").append(message))));
                         }

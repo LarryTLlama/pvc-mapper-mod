@@ -323,7 +323,7 @@ public class PlayerFetchUtils {
         }
     }
 
-    OrwellMuteCases[] omc;
+    OrwellMuteCases[] omc = new OrwellMuteCases[0];
 
     public CompletableFuture<OrwellMuteCases[]> fetchOrwellMuteCases() {
         String url = String.format("%s/orwell-mute-data.json", NetworkUtils.BASE_URL);
