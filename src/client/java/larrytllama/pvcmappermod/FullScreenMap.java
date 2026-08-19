@@ -349,21 +349,21 @@ public class FullScreenMap extends Screen {
     public boolean mouseScrolled(double a, double b, double c, double d) {
         int scroll = (int) Math.signum(d);
         if (scroll == 0) return super.mouseScrolled(a, b, c, d);
-        // Get current middle
+        // Get cursor position in world offset
         int oldtilesize = 1 << (17 - zoomlevel);
         double oldscale = (double) minimapTileSize / oldtilesize;
-        double oldMiddleX = (this.width / 2) / oldscale;
-        double oldMiddleZ = (this.height / 2) / oldscale;
+        double oldCursorWorldOffsetX = a / oldscale;
+        double oldCursorWorldOffsetZ = b / oldscale;
         // Move to new zoom level
-        zoomlevel += scroll;;
+        zoomlevel += scroll;
         zoomlevel = Math.max(minZoomLevel, Math.min(maxZoomLevel, zoomlevel));
         // Set position to new x/z
         int newtilesize = 1 << (17 - zoomlevel);
         double newscale = (double) minimapTileSize / newtilesize;
-        double newMiddleX = (this.width / 2) / newscale;
-        double newMiddleZ = (this.height / 2) / newscale;
-        x -= (newMiddleX - oldMiddleX);
-        z -= (newMiddleZ - oldMiddleZ);
+        double newCursorWorldOffsetX = a / newscale;
+        double newCursorWorldOffsetZ = b / newscale;
+        x -= (newCursorWorldOffsetX - oldCursorWorldOffsetX);
+        z -= (newCursorWorldOffsetZ - oldCursorWorldOffsetZ);
         int newZoomLevel = zoomlevel;
         executor.schedule(() -> {
             if(newZoomLevel == zoomlevel) {
