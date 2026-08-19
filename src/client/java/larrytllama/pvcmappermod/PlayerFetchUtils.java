@@ -323,6 +323,35 @@ public class PlayerFetchUtils {
         }
     }
 
+    // From/To IDs e.g N4;X30Z-27 or P1
+    public CompletableFuture<DirectionsResponse> fetchDirectionsAsync(String from, String to) {
+        String url = String.format("%s/routemaster/pathfind/%s/%s", NetworkUtils.API_V2, from, to);
+        try {
+            java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
+                .uri(new URI(url))
+                .GET().build();
+            LogUtils.debug("Fetching all networks from: " + request.uri().toString());
+            return NetworkUtils.HTTP_CLIENT.sendAsync(request, java.net.http.HttpResponse.BodyHandlers.ofString())
+                .thenApply(response -> {
+                    if (response.statusCode() == 200) {
+                        Gson gson = new Gson();
+                        DirectionsResponse features = gson.fromJson(response.body(), DirectionsResponse.class);
+                        return features;
+                    }
+                    return new DirectionsResponse();
+                })
+                .exceptionally(e -> {
+                    showToast("Mapper Connect Error", "Check your internet connection?");
+                    LogUtils.error("Failed to get directions from PVC Mapper!", e);
+                    return new DirectionsResponse();
+                });
+        } catch (Exception e) {
+            showToast("Mapper Connect Error", "Check your internet connection?");
+            LogUtils.error("Failed to get directions from PVC Mapper!", e);
+            return CompletableFuture.completedFuture(new DirectionsResponse());
+        }
+    }
+
     OrwellMuteCases[] omc;
 
     public CompletableFuture<OrwellMuteCases[]> fetchOrwellMuteCases() {
@@ -734,6 +763,7 @@ class SearchResult {
     String name;
     String id;
     String description;
+    String dimension;
     int x;
     int z;
 }
@@ -769,4 +799,23 @@ class OrwellMuteCases {
     String replacewith;
     String angyreplace;
     boolean important;
+}
+
+class DirectionsNodeData {
+    String dimension;
+    String type;
+    String network;
+    int x;
+    int z;
+}
+
+class DirectionsNode {
+    String id;
+    DirectionsNodeData data;
+}
+
+class DirectionsResponse {
+    String status; 
+    String error;
+    DirectionsNode[] path;
 }

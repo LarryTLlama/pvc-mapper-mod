@@ -2,8 +2,6 @@ package larrytllama.pvcmappermod;
 
 import larrytllama.pvcmappermod.utils.*;
 
-import larrytllama.pvcmappermod.utils.ResIdentifier;
-
 import java.awt.geom.Line2D;
 import java.awt.geom.Rectangle2D;
 import java.net.URI;
@@ -74,10 +72,12 @@ public class Minimap {
 
     public PlayerFetchUtils pfu;
     public SettingsProvider sp;
+    public DirectionsProvider dp;
     public Network[] allNetworks;
-    public static Minimap attach(PlayerFetchUtils pfu, SettingsProvider sp) {
+    public static Minimap attach(PlayerFetchUtils pfu, SettingsProvider sp, DirectionsProvider dp) {
         Minimap minimap = new Minimap();
         minimap.pfu = pfu;
+        minimap.dp = dp;
         pfu.fetchNetworksAsync().thenAccept(networks -> {
             minimap.allNetworks = networks;
         });
@@ -225,7 +225,12 @@ public class Minimap {
         } else if(sp.miniMapPos == MiniMapPositions.TOP_LEFT) {
             tooltipX = 100;
         }
-        MapRenderUtils.drawTooltipString(context, tooltipText, tooltipX, 8);
+
+        if(dp != null && dp.routeActive) {
+            MapRenderUtils.drawTooltipString(context, tooltipText, tooltipX, 24 + (mcfont.lineHeight * 2));
+        } else {
+            MapRenderUtils.drawTooltipString(context, tooltipText, tooltipX, 8);
+        }
     }
 
     private ResIdentifier playerTooltipSkin = ResIdentifier.of("minecraft","textures/entity/player/wide/steve.png");;
@@ -732,6 +737,31 @@ public class Minimap {
                 mc.player.blockPosition().getY(), mc.player.blockPosition().getZ()), textCoordinatesPos, 95, 0xFFFFFFFF);
 
         context.pose().popMatrix();
+
+        // Directions stuff
+        if(dp != null && dp.routeActive) {
+            int tooltipX = -1000;
+            int maxSize = 0;
+            if(sp.miniMapPos == MiniMapPositions.TOP_RIGHT) {
+                tooltipX = context.guiWidth() - 100 - maxSize;
+            } else if(sp.miniMapPos == MiniMapPositions.TOP_LEFT) {
+                tooltipX = 100;
+            }
+            List<String> cont = List.of();
+            if(/*? if <26.2 {*/mc.screen/*?} else {*//*mc.gui.screen()*//*?}*/ instanceof ChatScreen) {
+                cont = List.of(
+                    String.format("%s %s %s", dp.directionArrow, dp.directionInstruction, dp.directionArrow),
+                    String.format("in %dm", dp.directionDistance),
+                    "To stop: /mapper stop-directions"
+                );
+            } else {
+                cont = List.of(
+                    String.format("%s %s %s", dp.directionArrow, dp.directionInstruction, dp.directionArrow),
+                    String.format("in %dm", dp.directionDistance)
+                );
+            }
+            MapRenderUtils.drawTooltipString(context, cont, tooltipX, 8);   
+        }
     }
 
 

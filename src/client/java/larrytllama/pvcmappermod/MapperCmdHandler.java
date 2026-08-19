@@ -75,10 +75,16 @@ public class MapperCmdHandler {
                                 chatMsg.append(Component.literal(results[i].description + "\n   ").withStyle(Style.EMPTY.withItalic(true)));
                                 chatMsg.append(Component.literal("Type: " + results[i].type));
                                 if (results[i].type.equals("place") || results[i].type.equals("area")) {
-                                    /* TODO: Once the SearchResult API transmits the dimension, use it here instead of defaulting to same-dimension */
                                     chatMsg.append(
                                         Component.literal(" [View on Map]").withStyle(
-                                            Style.EMPTY.withClickEvent(new ClickEvent.RunCommand("map " + results[i].x + " " + results[i].z))
+                                            Style.EMPTY.withClickEvent(new ClickEvent.RunCommand("map " + results[i].x + " " + results[i].z + " " + results[i].dimension))
+                                            .withColor(ChatFormatting.GREEN)
+                                        )
+                                    );
+                                    
+                                    chatMsg.append(
+                                        Component.literal(" [Directions Here]").withStyle(
+                                            Style.EMPTY.withClickEvent(new ClickEvent.RunCommand("mapper directions " + results[i].id))
                                             .withColor(ChatFormatting.GREEN)
                                         )
                                     );
@@ -113,14 +119,18 @@ public class MapperCmdHandler {
                 })
                 .then(ClientCommandManager.argument("x", IntegerArgumentType.integer())
                     .then(ClientCommandManager.argument("z", IntegerArgumentType.integer())
-                        .executes((context) -> {
-                            int x = IntegerArgumentType.getInteger(context, "x");
-                            int z = IntegerArgumentType.getInteger(context, "z");
-                            PVCMapperModClient.setScreenOnNextTick(modclient.fsm, () -> {
-                                modclient.fsm.navToCoords(x, z);
-                            });
-                            return 1;
-                        })
+                        .then(ClientCommandManager.argument("dimension", StringArgumentType.string())
+                            .executes((context) -> {
+                                int x = IntegerArgumentType.getInteger(context, "x");
+                                int z = IntegerArgumentType.getInteger(context, "z");
+                                String dimension = StringArgumentType.getString(context, "dimensionID");
+                                PVCMapperModClient.setScreenOnNextTick(modclient.fsm, () -> {
+                                    modclient.fsm.currentDimension = dimension;
+                                    modclient.fsm.navToCoords(x, z);
+                                });
+                                return 1;
+                            })
+                        )
                     )
                 )
             );
@@ -145,6 +155,10 @@ public class MapperCmdHandler {
                     })
                 )
             );
+
+            MutableComponent directionsPrefix = Component.literal("[").withStyle(ChatFormatting.BOLD, ChatFormatting.GRAY)
+                .append(Component.literal("DIR").withStyle(ChatFormatting.YELLOW))
+                .append(Component.literal("] ").withStyle(ChatFormatting.GRAY));
 
             dispatcher.register(
                 ClientCommandManager.literal("mapper")
@@ -182,7 +196,40 @@ public class MapperCmdHandler {
                     }
                     return 1;
                 }))
-                
+                .then(ClientCommandManager.literal("stop-directions").executes((context) -> {
+                    if(modclient.dp == null) {
+                        context.getSource().sendFeedback(Component.literal("The Directions Provider has not initialised yet.").withStyle(ChatFormatting.RED));
+                    } else if(!modclient.dp.routeActive) {
+                        context.getSource().sendFeedback(Component.empty().append(directionsPrefix).append(Component.literal("A route is not currently active").withStyle(ChatFormatting.RED)));
+                    } else {
+                        modclient.dp.clearRoute();
+                    }
+                    return 1;
+                }))
+                .then(ClientCommandManager.literal("directions")
+                    .then(ClientCommandManager.argument("destinationid", StringArgumentType.string()).executes((context) -> {
+                        String destinationID = StringArgumentType.getString(context, "destinationid");
+
+                        // Set up route
+                        if(modclient.dp == null) {
+                            context.getSource().sendFeedback(Component.literal("The Directions Provider has not initialised yet.").withStyle(ChatFormatting.RED));
+                            return 1;
+                        } else {
+                            context.getSource().sendFeedback(Component.empty().append(directionsPrefix).append("Now loading directions..."));
+                            modclient.dp.setupRoute(
+                                String.format("X%dZ%dD%s", Minecraft.getInstance().player.getBlockX(), Minecraft.getInstance().player.getBlockZ(), modclient.dp.getCurrentDimension()), 
+                                destinationID, 
+                                (MutableComponent chatMsg) -> {
+                                    context.getSource().sendFeedback(Component.empty().append(directionsPrefix).append(chatMsg));
+                                },
+                                (String error) -> {
+                                    context.getSource().sendFeedback(Component.empty().append(directionsPrefix).append(Component.literal("An error occurred when trying to get directions: ").withStyle(ChatFormatting.RED).append(Component.literal(error).withStyle(ChatFormatting.YELLOW))));
+                                }
+                            );
+                        }
+                        return 1;
+                    }))
+                )  
             );
 
             dispatcher.register(
