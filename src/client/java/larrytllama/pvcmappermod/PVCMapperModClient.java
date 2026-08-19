@@ -36,6 +36,7 @@ import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.client.KeyMapping.Category;
 import net.minecraft.network.chat.Component;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
+import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents.ModifyGame;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.Style;
@@ -52,6 +53,10 @@ public class PVCMapperModClient implements ClientModInitializer {
     public FullScreenMap fsm;
     public ShopsScreen shopsScreen = new ShopsScreen(Component.literal("PVC Mapper - Shops View"));
     public Minimap minimap;
+    public DirectionsProvider dp;
+    public SettingsProvider sp;
+    public PlayerFetchUtils pfu;
+
     // Brigadier commands execute synchronously inside ChatScreen's text field handler.
     // Setting screen synchronously gets instantly closed/overwritten by the chat screen closing,
     // so we queue the screen/task to open on the very next client tick instead.
@@ -71,12 +76,35 @@ public class PVCMapperModClient implements ClientModInitializer {
     private static boolean seenMainMenu = false;
 
     private float inLevelTicks = 0;
+
+    MutableComponent[] orwellMessagePrefixes = {
+        Component.empty().withStyle(Style.EMPTY)
+            .append(Component.literal("|").withStyle(Style.EMPTY.withBold(true).withColor(ChatFormatting.GRAY)))
+            .append(Component.literal(" «Bot» ").withStyle(Style.EMPTY.withBold(false).withColor(ChatFormatting.GOLD)))
+            .append(Component.literal("OrwellBeta").withStyle(Style.EMPTY))
+            .append(Component.literal(" › ").withStyle(Style.EMPTY.withColor(ChatFormatting.GRAY))),
+        Component.empty().withStyle(Style.EMPTY)
+            .append(Component.literal(" «Bot» ").withStyle(Style.EMPTY.withColor(ChatFormatting.GOLD)))
+            .append(Component.literal("OrwellBeta").withStyle(Style.EMPTY))
+            .append(Component.literal(" › ").withStyle(Style.EMPTY.withColor(ChatFormatting.GRAY))),
+        Component.empty().withStyle(Style.EMPTY)
+            .append(Component.literal("[").withStyle(Style.EMPTY.withColor(ChatFormatting.GOLD)))
+            .append(Component.literal("OrwellBeta").withStyle(Style.EMPTY.withColor(ChatFormatting.RED)))
+            .append(Component.literal(" -> ").withStyle(Style.EMPTY.withColor(ChatFormatting.GOLD)))
+            .append(Component.literal("me").withStyle(Style.EMPTY.withColor(ChatFormatting.RED)))
+            .append(Component.literal("] ").withStyle(Style.EMPTY.withColor(ChatFormatting.GOLD))),
+        Component.empty().withStyle(Style.EMPTY)
+            .append(Component.literal("[").withStyle(Style.EMPTY.withColor(ChatFormatting.DARK_GRAY)))
+            .append(Component.literal("AFK").withStyle(Style.EMPTY.withBold(true).withColor(ChatFormatting.RED)))
+            .append(Component.literal("] ").withStyle(Style.EMPTY.withColor(ChatFormatting.DARK_GRAY)))
+    };
+
     @Override
     public void onInitializeClient() {
         // Settings provider
         SettingsProvider sp = SettingsProvider.getInstance();
         sp.updateSettings();
-        
+        this.sp = sp;
         // Set up player fetchererer
         PlayerFetchUtils pfu = new PlayerFetchUtils();
         pfu.fetchOrwellMuteCases().thenAccept((omc) -> {
@@ -84,7 +112,7 @@ public class PVCMapperModClient implements ClientModInitializer {
             System.out.println("Fetch orwell mute cases. Let the chaos begin!");
         });
         new MapperCmdHandler(pfu, this);
-        
+        this.pfu = pfu;
 
         ScreenEvents.AFTER_INIT.register((client, screen, w, h) -> {
             if (!seenMainMenu && screen instanceof Screen) {
@@ -97,8 +125,8 @@ public class PVCMapperModClient implements ClientModInitializer {
                 }
             }
         });
-
-        this.minimap = Minimap.attach(pfu, sp);
+        this.dp = new DirectionsProvider(pfu, minimap);
+        this.minimap = Minimap.attach(pfu, sp, dp);
 
         HttpClient http = HttpClient.newHttpClient();
         ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
@@ -202,6 +230,7 @@ public class PVCMapperModClient implements ClientModInitializer {
                     /*hud.*/
                     //?}
                     getTabList();
+                
                 // Check against IP if in server
                 if( Minecraft.getInstance().getConnection().getServerData() != null && 
                     Minecraft.getInstance().getConnection().getServerData().ip.contains("peacefulvanilla.club")) { // Just in case they change the subdomain
@@ -238,101 +267,97 @@ public class PVCMapperModClient implements ClientModInitializer {
             pfu.stopUpdates();
         });
 
-        MutableComponent[] orwellMessagePrefixes = {
-            Component.empty().withStyle(Style.EMPTY)
-                .append(Component.literal("|").withStyle(Style.EMPTY.withBold(true).withColor(ChatFormatting.GRAY)))
-                .append(Component.literal(" «Bot» ").withStyle(Style.EMPTY.withBold(false).withColor(ChatFormatting.GOLD)))
-                .append(Component.literal("OrwellBeta").withStyle(Style.EMPTY))
-                .append(Component.literal(" › ").withStyle(Style.EMPTY.withColor(ChatFormatting.GRAY))),
-            Component.empty().withStyle(Style.EMPTY)
-                .append(Component.literal(" «Bot» ").withStyle(Style.EMPTY.withColor(ChatFormatting.GOLD)))
-                .append(Component.literal("OrwellBeta").withStyle(Style.EMPTY))
-                .append(Component.literal(" › ").withStyle(Style.EMPTY.withColor(ChatFormatting.GRAY))),
-            Component.empty().withStyle(Style.EMPTY)
-                .append(Component.literal("[").withStyle(Style.EMPTY.withColor(ChatFormatting.GOLD)))
-                .append(Component.literal("OrwellBeta").withStyle(Style.EMPTY.withColor(ChatFormatting.RED)))
-                .append(Component.literal(" -> ").withStyle(Style.EMPTY.withColor(ChatFormatting.GOLD)))
-                .append(Component.literal("me").withStyle(Style.EMPTY.withColor(ChatFormatting.RED)))
-                .append(Component.literal("] ").withStyle(Style.EMPTY.withColor(ChatFormatting.GOLD)))
-        };
-
         ClientReceiveMessageEvents.ALLOW_GAME.register((message, overlay) -> {
             if (Minecraft.getInstance().player == null) return true;
             String text = message.getString();
             if(text.trim().length() == 0) return false;
-            if(sp.orwellMeter == OrwellianMeter.FULL_MUTE || sp.orwellMeter == OrwellianMeter.SMART) {
-                for (int i = 0; i < orwellMessagePrefixes.length; i++) {
-                    if(text.startsWith(orwellMessagePrefixes[i].getString())) {
-                        if( sp.orwellMeter == OrwellianMeter.FULL_MUTE ||
-                           (
-                            sp.orwellMeter == OrwellianMeter.SMART &&
-                            (text.contains("@") && !text.contains(Minecraft.getInstance().player.getPlainTextName()))
-                           )
-                         ) {
-                            return false;
-                           }
+            boolean isOtherPlayerMention = this.isOtherPlayerMention(text);
+
+            if(sp.orwellMeter == OrwellianMeter.FULL_MUTE ||
+               ((sp.orwellMeter == OrwellianMeter.SMART || sp.orwellMeter == OrwellianMeter.ANGY) && isOtherPlayerMention)) {
+                    for (int ii = 0; ii < pfu.omc.length; ii++) { // Apply our custom case if present
+                        if(text.contains(pfu.omc[ii].includes)) return true;
                     }
-                }
-            }
+                    return false;
+               }
             return true;
         });
 
         // Get rid of Orwell to make him angy
-        ClientReceiveMessageEvents.MODIFY_GAME.register((message, overlay) -> {
-            if(sp.orwellMeter == OrwellianMeter.ALL) return message;
-            if (Minecraft.getInstance().player == null) return message;
-            // Orwell message types:
-            
-            String text = message.getString();
-
-            int applicablePrefix = -1;
-            for (int i = 0; i < orwellMessagePrefixes.length; i++) {
-                if(text.startsWith(orwellMessagePrefixes[i].getString())) {
-                    applicablePrefix = i;
-                    break;
-                }
-            }
-            if(applicablePrefix != -1) {
-                // If Orwell is mentioning someone, but not us: ignore
-                if(text.contains("@")) {
-                    if(text.contains(Minecraft.getInstance().player.getPlainTextName())) {
-                        return message;
-                    }
-                }
-                if(pfu.omc == null) return message;
-                for (int i = 0; i < pfu.omc.length; i++) {
-                    if(pfu.omc[i] == null || pfu.omc[i].includes == null) continue;
-                    if(text.contains(pfu.omc[i].includes)) {
-                        String otherplayer = "player";
-                        for (String word : text.split("\\s+")) {
-                            if(word.startsWith("@") && word.length() > 1) {
-                                otherplayer = word.substring(1);
-                                break;
-                            }
-                        }
-                        if(sp.orwellMeter == OrwellianMeter.SMART) {
-                            if(pfu.omc[i].replacewith == null) continue;
-                            String outputtext = pfu.omc[i].replacewith
-                                .replaceAll("%player%", Minecraft.getInstance().player.getPlainTextName())
-                                .replaceAll("%otherplayer%", otherplayer);
-                            if(pfu.omc[i].important) {
-                                return orwellMessagePrefixes[applicablePrefix].append(Component.literal(outputtext).withStyle(Style.EMPTY)).withStyle(Style.EMPTY.withHoverEvent(new HoverEvent.ShowText(Component.literal("Original message content:\n").append(message))));
-                            } else {
-                                return Component.literal(outputtext).withStyle(Style.EMPTY.withColor(ChatFormatting.DARK_GRAY).withItalic(true).withHoverEvent(new HoverEvent.ShowText(Component.literal("Original message content:\n").append(message))));
-                            }
-                        } else if(sp.orwellMeter == OrwellianMeter.ANGY) {
-                            if(pfu.omc[i].angyreplace == null) continue;
-                            String outputtext = pfu.omc[i].angyreplace
-                                .replaceAll("%player%", Minecraft.getInstance().player.getPlainTextName())
-                                .replaceAll("%otherplayer%", otherplayer);
-                            return orwellMessagePrefixes[applicablePrefix].append(Component.literal(outputtext).withStyle(Style.EMPTY)).withStyle(Style.EMPTY.withHoverEvent(new HoverEvent.ShowText(Component.literal("Original message content:\n").append(message))));
-                        }
-                    }
-                }
-                return message;
-            }
-
-            return message;
-        });
+        ClientReceiveMessageEvents.MODIFY_GAME.register(this.messageRunner);
     }
+
+    private boolean isOtherPlayerMention(String text) {
+        if (!text.contains("@")) return false;
+        if (Minecraft.getInstance().player == null) return false;
+        String playerName = Minecraft.getInstance().player.getPlainTextName();
+        for (String word : text.split("\\s+")) {
+            if (word.startsWith("@")) {
+                String mentionName = word.substring(1).replaceAll("[^A-Za-z0-9_]", "");
+                if (!mentionName.equals(playerName)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private ModifyGame messageRunner = (message, overlay) -> {
+        if(sp.orwellMeter == OrwellianMeter.ALL) return message;
+        // Orwell message types:
+        
+        String text = message.getString();
+        int applicablePrefix = -1;
+        for (int i = 0; i < orwellMessagePrefixes.length; i++) {
+            if(text.startsWith(orwellMessagePrefixes[i].getString())) {
+                applicablePrefix = i;
+                break;
+            }
+        }
+        if(applicablePrefix != -1) {
+            if(pfu.omc == null) return message;
+            for (int i = 0; i < pfu.omc.length; i++) {
+                if(pfu.omc[i] == null || pfu.omc[i].includes == null) continue;
+                String otherplayer = "player";
+                if(text.contains(pfu.omc[i].includes)) {
+                    for (String word : text.split("\\s+")) {
+                        if(word.startsWith("@") && word.length() > 1) {
+                            otherplayer = word.substring(1);
+                            break;
+                        }
+                    }
+                    if(sp.orwellMeter == OrwellianMeter.SMART) {
+                        if(pfu.omc[i].replacewith == null) continue;
+                        String outputtext = pfu.omc[i].replacewith
+                            .replaceAll("%player%", Minecraft.getInstance().player.getPlainTextName())
+                            .replaceAll("%otherplayer%", otherplayer);
+                        if(pfu.omc[i].important) {
+                            return orwellMessagePrefixes[applicablePrefix].append(Component.literal(outputtext).withStyle(Style.EMPTY)).withStyle(Style.EMPTY.withHoverEvent(new HoverEvent.ShowText(Component.literal("Original message content:\n").append(message))));
+                        } else {
+                            return Component.literal(outputtext).withStyle(Style.EMPTY.withColor(ChatFormatting.DARK_GRAY).withItalic(true).withHoverEvent(new HoverEvent.ShowText(Component.literal("Original message content:\n").append(message))));
+                        }
+                    } else if(sp.orwellMeter == OrwellianMeter.ANGY) {
+                        if(pfu.omc[i].angyreplace == null) continue;
+                        String outputtext = pfu.omc[i].angyreplace
+                            .replaceAll("%player%", Minecraft.getInstance().player.getPlainTextName())
+                            .replaceAll("%otherplayer%", otherplayer);
+                        return orwellMessagePrefixes[applicablePrefix].append(Component.literal(outputtext).withStyle(Style.EMPTY)).withStyle(Style.EMPTY.withHoverEvent(new HoverEvent.ShowText(Component.literal("Original message content:\n").append(message))));
+                    }
+                } else if(sp.orwellMeter == OrwellianMeter.ANGY) {
+                    String outputtext = pfu.omc[i].angyreplace
+                        .replaceAll("%player", Minecraft.getInstance().player.getPlainTextName())
+                        .replaceAll("%otherplayer%", otherplayer);
+                    return orwellMessagePrefixes[applicablePrefix].append(Component.literal(outputtext).withStyle(Style.EMPTY)).withStyle(Style.EMPTY.withHoverEvent(new HoverEvent.ShowText(Component.literal("Modified by PVC Mapper Mod\nOriginal message content:\n").append(message))));
+                }
+            }
+            // If Orwell is mentioning someone, but not us: ignore
+            if(text.contains("@")) {
+                if(text.contains(Minecraft.getInstance().player.getPlainTextName())) {
+                    return message;
+                }
+            }
+            return message.copy().withStyle(Style.EMPTY.withHoverEvent(new HoverEvent.ShowText(Component.literal("This bot message wasn't included in the Mapper's orwell-muting database.\nThink it should be? Send Larry a DM!\nInclude the *exact* content!"))));
+        }
+        return message;
+    };
 }
