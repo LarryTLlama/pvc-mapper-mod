@@ -23,7 +23,7 @@ base {
 
 repositories {
     maven("https://maven.shedaniel.me/") { name = "Shedaniel" }
-    maven("https://maven.terraformersmc.com/releases/") { name = "TerraformersMC" }
+    maven("https://maven.terraformersmc.com/") { name = "TerraformersMC" }
 }
 
 val loom = project.extensions.getByName<net.fabricmc.loom.api.LoomGradleExtensionAPI>("loom")
