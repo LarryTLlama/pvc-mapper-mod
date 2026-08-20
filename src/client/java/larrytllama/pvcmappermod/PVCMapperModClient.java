@@ -6,6 +6,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
@@ -77,6 +78,8 @@ public class PVCMapperModClient implements ClientModInitializer {
 
     private float inLevelTicks = 0;
 
+    public ShortArea[] shortAreas = new ShortArea[0];
+
     MutableComponent[] orwellMessagePrefixes = {
         Component.empty().withStyle(Style.EMPTY)
             .append(Component.literal("|").withStyle(Style.EMPTY.withBold(true).withColor(ChatFormatting.GRAY)))
@@ -110,6 +113,9 @@ public class PVCMapperModClient implements ClientModInitializer {
         pfu.fetchOrwellMuteCases().thenAccept((omc) -> {
             pfu.omc = omc;
             System.out.println("Fetch orwell mute cases. Let the chaos begin!");
+        });
+        pfu.fetchShortAreasAsync().thenAccept(areas -> {
+            this.shortAreas = areas;
         });
         new MapperCmdHandler(pfu, this);
         this.pfu = pfu;
@@ -219,6 +225,8 @@ public class PVCMapperModClient implements ClientModInitializer {
         });
 
 
+        ArrayList<Integer> insideIDs = new ArrayList<Integer>();
+
         ClientTickEvents.END_CLIENT_TICK.register((client) -> {
             if (client.level == null) return;
             inLevelTicks++;
@@ -255,6 +263,31 @@ public class PVCMapperModClient implements ClientModInitializer {
                     isInPVC = false; // Prevent sending ranks when not in server
                 }
                 minimap.isLoadingIn = false;
+            }
+
+            if (Minecraft.getInstance().player == null || Minecraft.getInstance().level == null) return;
+
+            int x = Minecraft.getInstance().player.getBlockX();
+            int z = Minecraft.getInstance().player.getBlockZ();
+
+            // Start up area popups
+            for (int i = 0; i < this.shortAreas.length; i++) {
+                if (
+                    this.shortAreas[i].dimension.equals(minimap.getDimensionNID()) &&
+                    this.shortAreas[i].maxX > x &&
+                    this.shortAreas[i].maxY > z &&
+                    this.shortAreas[i].minX < x &&
+                    this.shortAreas[i].minY < z &&
+                    this.shortAreas[i].polygon.contains(x, z)
+                ) {
+                    if (insideIDs.contains(this.shortAreas[i].id)) continue;
+                    CompatUtils.addToast(new WelcomeToast(Component.literal("Welcome to:"), Component.literal(this.shortAreas[i].name)));
+                    insideIDs.add(this.shortAreas[i].id);
+                } else {
+                    if(insideIDs.remove(Integer.valueOf(this.shortAreas[i].id))) {
+                        CompatUtils.addToast(new WelcomeToast( Component.literal("Now leaving:"), Component.literal(this.shortAreas[i].name)));
+                    }
+                }
             }
         });
         ClientPlayConnectionEvents.JOIN.register((a, b, c) -> {

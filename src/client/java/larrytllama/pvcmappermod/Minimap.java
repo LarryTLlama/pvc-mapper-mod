@@ -203,6 +203,7 @@ public class Minimap {
         String dimension = "minecraft_" + CompatUtils.getIdentifier(Minecraft.getInstance().level.dimension()).getPath();
         if(isInTerra2 && dimension.equals("minecraft_overworld")) return "minecraft_terra2";
         else if(isInTerra2) return "minecraft_unknown_world";
+        else if(isInQueue) return "minecraft_unknown_world";
         return dimension;
     }
 
