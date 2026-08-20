@@ -8,6 +8,8 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -16,9 +18,11 @@ import java.util.concurrent.TimeUnit;
 import org.lwjgl.glfw.GLFW;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import com.mojang.brigadier.suggestion.SuggestionProvider;
 
 import larrytllama.pvcmappermod.mixin.client.TabListMixin;
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 //? if <26.1 {
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
@@ -34,6 +38,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.multiplayer.PlayerInfo;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.client.KeyMapping.Category;
 import net.minecraft.network.chat.Component;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
@@ -41,6 +46,7 @@ import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents.Modi
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.Style;
+import net.minecraft.world.item.Item;
 
 public class PVCMapperModClient implements ClientModInitializer {
     public Category MOD_CATEGORY = Category.register(ResIdentifier.of("pvcmappermod", "category").get());
@@ -93,6 +99,21 @@ public class PVCMapperModClient implements ClientModInitializer {
         Component.empty().withStyle(Style.EMPTY)
             .append(Component.literal("[").withStyle(Style.EMPTY.withColor(ChatFormatting.GOLD)))
             .append(Component.literal("OrwellBeta").withStyle(Style.EMPTY.withColor(ChatFormatting.RED)))
+            .append(Component.literal(" -> ").withStyle(Style.EMPTY.withColor(ChatFormatting.GOLD)))
+            .append(Component.literal("me").withStyle(Style.EMPTY.withColor(ChatFormatting.RED)))
+            .append(Component.literal("] ").withStyle(Style.EMPTY.withColor(ChatFormatting.GOLD))),
+        Component.empty().withStyle(Style.EMPTY)
+            .append(Component.literal("|").withStyle(Style.EMPTY.withBold(true).withColor(ChatFormatting.GRAY)))
+            .append(Component.literal(" «Bot» ").withStyle(Style.EMPTY.withBold(false).withColor(ChatFormatting.GOLD)))
+            .append(Component.literal("Orwell").withStyle(Style.EMPTY))
+            .append(Component.literal(" › ").withStyle(Style.EMPTY.withColor(ChatFormatting.GRAY))),
+        Component.empty().withStyle(Style.EMPTY)
+            .append(Component.literal(" «Bot» ").withStyle(Style.EMPTY.withColor(ChatFormatting.GOLD)))
+            .append(Component.literal("Orwell").withStyle(Style.EMPTY))
+            .append(Component.literal(" › ").withStyle(Style.EMPTY.withColor(ChatFormatting.GRAY))),
+        Component.empty().withStyle(Style.EMPTY)
+            .append(Component.literal("[").withStyle(Style.EMPTY.withColor(ChatFormatting.GOLD)))
+            .append(Component.literal("Orwell").withStyle(Style.EMPTY.withColor(ChatFormatting.RED)))
             .append(Component.literal(" -> ").withStyle(Style.EMPTY.withColor(ChatFormatting.GOLD)))
             .append(Component.literal("me").withStyle(Style.EMPTY.withColor(ChatFormatting.RED)))
             .append(Component.literal("] ").withStyle(Style.EMPTY.withColor(ChatFormatting.GOLD))),

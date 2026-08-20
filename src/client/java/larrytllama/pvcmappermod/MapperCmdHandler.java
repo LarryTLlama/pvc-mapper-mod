@@ -4,10 +4,13 @@ import larrytllama.pvcmappermod.utils.*;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
 
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.suggestion.SuggestionProvider;
 
 /*? if <26.1 {*/
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
@@ -15,13 +18,15 @@ import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 /*import net.fabricmc.fabric.api.client.command.v2.ClientCommands;*/
 /*?}*/
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
+import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
-
+import net.minecraft.world.item.Item;
 
 import java.io.IOException;
 import java.net.URI;
@@ -234,6 +239,7 @@ public class MapperCmdHandler {
 
             dispatcher.register(
                 ClientCommandManager.literal("afksince").then(ClientCommandManager.argument("player", StringArgumentType.greedyString())
+                .suggests(this.PLAYER_SUGGESTIONS)
                 .executes((context) -> {
                     ArrayList<PlayerFetch> p = pfu.getPlayers();
                     for (int i = 0; i < p.size(); i++) {
@@ -289,6 +295,29 @@ public class MapperCmdHandler {
             )
         );
     }
+
+    public SuggestionProvider<FabricClientCommandSource> PLAYER_SUGGESTIONS = (context, builder) -> {
+        String remaining = builder.getRemaining().toLowerCase(Locale.ROOT);
+        for (Item item : BuiltInRegistries.ITEM) {
+            ResIdentifier id = ResIdentifier.of(BuiltInRegistries.ITEM.getKey(item));
+            if (id != null) {
+                String path = id.getPath();
+                if (path.toLowerCase(Locale.ROOT).startsWith(remaining)) {
+                    String suggestion = path.toUpperCase(Locale.ROOT);
+                    builder.suggest(suggestion);
+                }
+            }
+        }
+        
+        List<PlayerFetch> players = this.pfu.getPlayers();
+
+        for (PlayerFetch playerName : players) {
+            if (playerName.name.toLowerCase(Locale.ROOT).startsWith(remaining)) {
+                builder.suggest(playerName.name);
+            }
+        }
+        return builder.buildFuture();
+    };
 
     /*? if >=26.1 {*/
     /*private static class ClientCommandManager {
