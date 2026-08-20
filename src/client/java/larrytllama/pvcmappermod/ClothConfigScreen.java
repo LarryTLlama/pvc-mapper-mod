@@ -115,7 +115,7 @@ public class ClothConfigScreen extends Screen {
 
         ConfigCategory miscSettings = builder.getOrCreateCategory(Component.literal("Miscellaneous Settings"));
         this.orwellMeter = entryBuilder.startEnumSelector(Component.literal("Orwell Mute Mode"), OrwellianMeter.class, sp.orwellMeter)
-            .setDefaultValue(OrwellianMeter.SMART)
+            .setDefaultValue(OrwellianMeter.ALL)
             .setTooltip(
                 Component.literal("Quiet OrwellBeta down in chat by different amounts:"), 
                 Component.literal("ALL = Usual chat chaos by Orwell"),

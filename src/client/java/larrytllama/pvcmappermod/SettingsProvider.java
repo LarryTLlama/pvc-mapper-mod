@@ -44,7 +44,7 @@ public class SettingsProvider {
     
     public boolean hideMinimapNetworks = false;
 
-    public OrwellianMeter orwellMeter = OrwellianMeter.SMART;
+    public OrwellianMeter orwellMeter = OrwellianMeter.ALL;
 
     public boolean showWelcomePopup = true;
 
