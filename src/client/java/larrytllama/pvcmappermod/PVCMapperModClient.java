@@ -326,7 +326,11 @@ public class PVCMapperModClient implements ClientModInitializer {
             String text = message.getString();
             if(text.trim().length() == 0) return false;
             boolean isOtherPlayerMention = this.isOtherPlayerMention(text);
-
+            boolean isBotMsg = false;
+            for (int i = 0; i < orwellMessagePrefixes.length; i++) {
+                if(text.startsWith(orwellMessagePrefixes[i].getString())) isBotMsg = true;
+            }
+            if (!isBotMsg) return true;
             if(sp.orwellMeter == OrwellianMeter.FULL_MUTE ||
                ((sp.orwellMeter == OrwellianMeter.SMART || sp.orwellMeter == OrwellianMeter.ANGY) && isOtherPlayerMention)) {
                     for (int ii = 0; ii < pfu.omc.length; ii++) { // Apply our custom case if present
