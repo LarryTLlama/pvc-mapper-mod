@@ -46,6 +46,10 @@ public class SettingsProvider {
 
     public OrwellianMeter orwellMeter = OrwellianMeter.SMART;
 
+    public boolean showWelcomePopup = true;
+
+    public boolean showLeavingPopup = true;
+
     Path path = FabricLoader.getInstance().getConfigDir().resolve("pvcmapper.json");
 
     public SettingsProvider() {
@@ -70,6 +74,8 @@ public class SettingsProvider {
                 debugMode = settingsFromFile.debugMode;
                 hideMinimapNetworks = settingsFromFile.hideMinimapNetworks;
                 if(settingsFromFile.orwellMeter != null) orwellMeter = settingsFromFile.orwellMeter;
+                showWelcomePopup = settingsFromFile.showWelcomePopup;
+                showLeavingPopup = settingsFromFile.showLeavingPopup;
             } catch(Exception e) {
                 LogUtils.error("Couldn't read settings file", e);
                 new SystemToast(SystemToastId.FILE_DROP_FAILURE, Component.literal("PVC Mapper Settings Error"), Component.literal("Couldn't open the Setting file, check you have permissions to access it!"));
@@ -105,6 +111,8 @@ public class SettingsProvider {
         settingsToSet.debugMode = debugMode;
         settingsToSet.hideMinimapNetworks = hideMinimapNetworks;
         settingsToSet.orwellMeter = orwellMeter;
+        settingsToSet.showWelcomePopup = showWelcomePopup;
+        settingsToSet.showLeavingPopup = showLeavingPopup;
         try {
             LogUtils.debug("Writing to settings!" + path.getParent().toString());
             Files.createDirectories(path.getParent());
@@ -133,6 +141,8 @@ class SettingsJSON {
     boolean debugMode = false;
     boolean hideMinimapNetworks = false;
     OrwellianMeter orwellMeter = OrwellianMeter.SMART;
+    boolean showWelcomePopup = true;
+    boolean showLeavingPopup = true;
 }
 
 enum MiniMapPositions {

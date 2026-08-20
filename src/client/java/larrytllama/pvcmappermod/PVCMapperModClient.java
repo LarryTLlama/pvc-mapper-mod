@@ -281,11 +281,11 @@ public class PVCMapperModClient implements ClientModInitializer {
                     this.shortAreas[i].polygon.contains(x, z)
                 ) {
                     if (insideIDs.contains(this.shortAreas[i].id)) continue;
-                    CompatUtils.addToast(new WelcomeToast(Component.literal("Welcome to:"), Component.literal(this.shortAreas[i].name)));
+                    if (sp.showWelcomePopup) CompatUtils.addToast(new WelcomeToast(Component.literal("Welcome to:"), Component.literal(this.shortAreas[i].name)));
                     insideIDs.add(this.shortAreas[i].id);
                 } else {
                     if(insideIDs.remove(Integer.valueOf(this.shortAreas[i].id))) {
-                        CompatUtils.addToast(new WelcomeToast( Component.literal("Now leaving:"), Component.literal(this.shortAreas[i].name)));
+                        if (sp.showLeavingPopup) CompatUtils.addToast(new WelcomeToast( Component.literal("Now leaving:"), Component.literal(this.shortAreas[i].name)));
                     }
                 }
             }

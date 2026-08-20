@@ -283,7 +283,7 @@ public class Minimap {
     }
 
     public boolean isInTerra2 = false;
-    public boolean isInQueue = false;
+    public boolean isInQueue = true;
     public boolean isLoadingIn = true;
     public String[] spinnerParts = {" |", "/", "-", "\\", " |", "/", "-", "\\"};
     private int spinnerPart = 0;
