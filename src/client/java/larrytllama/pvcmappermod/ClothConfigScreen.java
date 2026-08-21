@@ -40,6 +40,8 @@ public class ClothConfigScreen extends Screen {
     private EnumListEntry<MiniMapPositions> miniMapPos;
     private EnumListEntry<BigMapPos> bigMapPos;
     private EnumListEntry<OrwellianMeter> orwellMeter;
+    private BooleanListEntry showWelcomePopup;
+    private BooleanListEntry showLeavingPopup;
 
     public Screen getClothConfig(Screen parent) {
         ConfigBuilder builder = ConfigBuilder.create()
@@ -57,6 +59,8 @@ public class ClothConfigScreen extends Screen {
             sp.debugMode = this.debugMode.getValue();
             sp.hideMinimapNetworks = this.hideMinimapNetworks.getValue();
             sp.orwellMeter = this.orwellMeter.getValue();
+            sp.showWelcomePopup = this.showWelcomePopup.getValue();
+            sp.showLeavingPopup = this.showLeavingPopup.getValue();
             sp.saveSettings();
         })
         .setTitle(Component.literal("PVC Mapper Mod Settings"));
@@ -89,9 +93,29 @@ public class ClothConfigScreen extends Screen {
             .build();
         minimapSettings.addEntry(this.minimapScale);
 
+        ConfigCategory alertSettings = builder.getOrCreateCategory(Component.literal("Alert Settings"));
+        this.showWelcomePopup = entryBuilder.startBooleanToggle(Component.literal("Show Welcome Popup"),  sp.showWelcomePopup)
+            .setDefaultValue(true)
+            .setTooltip(
+                Component.literal("Show a popup when you enter an area marked on the mapper")
+            )
+            .build();
+        alertSettings.addEntry(this.showWelcomePopup);
+        this.showLeavingPopup = entryBuilder.startBooleanToggle(Component.literal("Show Leaving Popup"),  sp.showLeavingPopup)
+            .setDefaultValue(true)
+            .setTooltip(
+                Component.literal("Show a popup when you leave an area marked on the mapper")
+            )
+            .build();
+        alertSettings.addEntry(this.showLeavingPopup);
+
+        alertSettings.addEntry(
+            entryBuilder.startTextDescription(Component.literal("You'll always be alerted when you disconnect from the Mapper server.")).build()
+        );
+
         ConfigCategory miscSettings = builder.getOrCreateCategory(Component.literal("Miscellaneous Settings"));
         this.orwellMeter = entryBuilder.startEnumSelector(Component.literal("Orwell Mute Mode"), OrwellianMeter.class, sp.orwellMeter)
-            .setDefaultValue(OrwellianMeter.SMART)
+            .setDefaultValue(OrwellianMeter.ALL)
             .setTooltip(
                 Component.literal("Quiet OrwellBeta down in chat by different amounts:"), 
                 Component.literal("ALL = Usual chat chaos by Orwell"),
@@ -136,6 +160,7 @@ public class ClothConfigScreen extends Screen {
         miscSettings.addEntry(
             entryBuilder.startTextDescription(Component.literal("To change keybinds, head to Options > Controls > Keybinds and scroll down!")).build()
         );
+
 
         return builder.build();
     }

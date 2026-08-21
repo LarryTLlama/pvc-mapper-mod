@@ -28,6 +28,7 @@ import java.util.concurrent.TimeUnit;
 
 import java.awt.geom.Line2D;
 import java.awt.geom.Rectangle2D;
+import java.time.Instant;
 
 import org.lwjgl.glfw.GLFW;
 
@@ -350,21 +351,21 @@ public class FullScreenMap extends Screen {
     public boolean mouseScrolled(double a, double b, double c, double d) {
         int scroll = (int) Math.signum(d);
         if (scroll == 0) return super.mouseScrolled(a, b, c, d);
-        // Get current middle
+        // Get cursor position in world offset
         int oldtilesize = 1 << (17 - zoomlevel);
         double oldscale = (double) minimapTileSize / oldtilesize;
-        double oldMiddleX = (this.width / 2) / oldscale;
-        double oldMiddleZ = (this.height / 2) / oldscale;
+        double oldCursorWorldOffsetX = a / oldscale;
+        double oldCursorWorldOffsetZ = b / oldscale;
         // Move to new zoom level
-        zoomlevel += scroll;;
+        zoomlevel += scroll;
         zoomlevel = Math.max(minZoomLevel, Math.min(maxZoomLevel, zoomlevel));
         // Set position to new x/z
         int newtilesize = 1 << (17 - zoomlevel);
         double newscale = (double) minimapTileSize / newtilesize;
-        double newMiddleX = (this.width / 2) / newscale;
-        double newMiddleZ = (this.height / 2) / newscale;
-        x -= (newMiddleX - oldMiddleX);
-        z -= (newMiddleZ - oldMiddleZ);
+        double newCursorWorldOffsetX = a / newscale;
+        double newCursorWorldOffsetZ = b / newscale;
+        x -= (newCursorWorldOffsetX - oldCursorWorldOffsetX);
+        z -= (newCursorWorldOffsetZ - oldCursorWorldOffsetZ);
         int newZoomLevel = zoomlevel;
         executor.schedule(() -> {
             if(newZoomLevel == zoomlevel) {
@@ -476,9 +477,14 @@ public class FullScreenMap extends Screen {
     public void drawPlayerTooltip(/*? if <26.1 {*/GuiGraphics/*?} else {*//*GuiGraphicsExtractor*//*?}*/ context, PlayerFetch player, int x, int y) {
 
         List<MutableComponent> content = List.of(
-                Component.literal(player.name).withStyle(ChatFormatting.BOLD),
+                Component.literal(player.name)
+                    .withStyle(Style.EMPTY.withBold(true))
+                    .append(
+                        Component.literal(player.afksince != null && ((Instant.now().toEpochMilli() - Instant.parse(player.afksince).toEpochMilli()) / 60000) > 2 ? " (AFK)" : "").withStyle(Style.EMPTY.withColor(ChatFormatting.RED))
+                    ),
                 Component.literal(player.x + ", " + player.z + " - " + pfu.prettyDimensionName(player.world)),
                 Component.literal("Health: " + (player.health / 2) + "/10 - Armor: " + (player.armor / 2) + "/10"));
+        
         MapRenderUtils.drawTooltipComponent(context, content, x + TooltipRenderUtil.PADDING_LEFT, y + TooltipRenderUtil.PADDING_TOP);
         if (hoverPlayerName != player.name) {
             getTooltipPlayer(player.uuid, player.name);

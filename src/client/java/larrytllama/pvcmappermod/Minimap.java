@@ -2,8 +2,6 @@ package larrytllama.pvcmappermod;
 
 import larrytllama.pvcmappermod.utils.*;
 
-import larrytllama.pvcmappermod.utils.ResIdentifier;
-
 import java.awt.geom.Line2D;
 import java.awt.geom.Rectangle2D;
 import java.net.URI;
@@ -74,10 +72,12 @@ public class Minimap {
 
     public PlayerFetchUtils pfu;
     public SettingsProvider sp;
+    public DirectionsProvider dp;
     public Network[] allNetworks;
-    public static Minimap attach(PlayerFetchUtils pfu, SettingsProvider sp) {
+    public static Minimap attach(PlayerFetchUtils pfu, SettingsProvider sp, DirectionsProvider dp) {
         Minimap minimap = new Minimap();
         minimap.pfu = pfu;
+        minimap.dp = dp;
         pfu.fetchNetworksAsync().thenAccept(networks -> {
             minimap.allNetworks = networks;
         });
@@ -203,6 +203,7 @@ public class Minimap {
         String dimension = "minecraft_" + CompatUtils.getIdentifier(Minecraft.getInstance().level.dimension()).getPath();
         if(isInTerra2 && dimension.equals("minecraft_overworld")) return "minecraft_terra2";
         else if(isInTerra2) return "minecraft_unknown_world";
+        else if(isInQueue) return "minecraft_unknown_world";
         return dimension;
     }
 
@@ -225,7 +226,12 @@ public class Minimap {
         } else if(sp.miniMapPos == MiniMapPositions.TOP_LEFT) {
             tooltipX = 100;
         }
-        MapRenderUtils.drawTooltipString(context, tooltipText, tooltipX, 8);
+
+        if(dp != null && dp.routeActive) {
+            MapRenderUtils.drawTooltipString(context, tooltipText, tooltipX, 24 + (mcfont.lineHeight * 2));
+        } else {
+            MapRenderUtils.drawTooltipString(context, tooltipText, tooltipX, 8);
+        }
     }
 
     private ResIdentifier playerTooltipSkin = ResIdentifier.of("minecraft","textures/entity/player/wide/steve.png");;
@@ -277,7 +283,7 @@ public class Minimap {
     }
 
     public boolean isInTerra2 = false;
-    public boolean isInQueue = false;
+    public boolean isInQueue = true;
     public boolean isLoadingIn = true;
     public String[] spinnerParts = {" |", "/", "-", "\\", " |", "/", "-", "\\"};
     private int spinnerPart = 0;
@@ -684,7 +690,10 @@ public class Minimap {
                         getTooltipPlayer(player.uuid, player.name);
                         renderMinimapTooltipPlayer(context,
                             List.of(
-                                String.format("%s", player.name),
+                                String.format("%s%s", 
+                                    player.name, 
+                                    player.afksince != null && ((Instant.now().toEpochMilli() - Instant.parse(player.afksince).toEpochMilli()) / 60000) > 2 ? " (AFK)" : ""
+                                ),
                                 String.format("%d, %d, %d in %s", player.x, player.y, player.z, prettyDimensionName(player.world)),
                                 String.format("Health: %.1f, Armor: %.1f", player.health, player.armor)
                             )
@@ -732,6 +741,31 @@ public class Minimap {
                 mc.player.blockPosition().getY(), mc.player.blockPosition().getZ()), textCoordinatesPos, 95, 0xFFFFFFFF);
 
         context.pose().popMatrix();
+
+        // Directions stuff
+        if(dp != null && dp.routeActive) {
+            int tooltipX = -1000;
+            int maxSize = 0;
+            if(sp.miniMapPos == MiniMapPositions.TOP_RIGHT) {
+                tooltipX = context.guiWidth() - 100 - maxSize;
+            } else if(sp.miniMapPos == MiniMapPositions.TOP_LEFT) {
+                tooltipX = 100;
+            }
+            List<String> cont = List.of();
+            if(/*? if <26.2 {*/mc.screen/*?} else {*//*mc.gui.screen()*//*?}*/ instanceof ChatScreen) {
+                cont = List.of(
+                    String.format("%s %s %s", dp.directionArrow, dp.directionInstruction, dp.directionArrow),
+                    String.format("in %dm", dp.directionDistance),
+                    "To stop: /mapper stop-directions"
+                );
+            } else {
+                cont = List.of(
+                    String.format("%s %s %s", dp.directionArrow, dp.directionInstruction, dp.directionArrow),
+                    String.format("in %dm", dp.directionDistance)
+                );
+            }
+            MapRenderUtils.drawTooltipString(context, cont, tooltipX, 8);   
+        }
     }
 
 

@@ -11,6 +11,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.awt.geom.Path2D;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonDeserializationContext;
@@ -53,6 +54,7 @@ public class PlayerFetchUtils {
                     Component.literal(content)
             )
         );
+        
     }
 
     private int errorCount;
@@ -295,6 +297,68 @@ public class PlayerFetchUtils {
         }
     }
 
+    // Only gets bounds, dimensions, names, IDs. All the good stuff but not too much
+    public CompletableFuture<ShortArea[]> fetchShortAreasAsync() {
+        try {
+            java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
+                .uri(new URI(NetworkUtils.API_V2 + "/fetch/all-areas/"))
+                .GET().build();
+            LogUtils.debug("Fetching area cache from " + request.uri().toString());
+            return NetworkUtils.HTTP_CLIENT.sendAsync(request, java.net.http.HttpResponse.BodyHandlers.ofString())
+                .thenApply(response -> {
+                    if (response.statusCode() == 200) {
+                        Gson gson = new Gson();
+                        AreasFetch[] areas = gson.fromJson(response.body(), AreasFetch[].class);
+                        ShortArea[] shortAreas = new ShortArea[areas.length];
+                        for (int i = 0; i < areas.length; i++) {
+                            // Pre-fill
+                            shortAreas[i] = new ShortArea();
+                            shortAreas[i].minX = areas[i].bounds[0][1];
+                            shortAreas[i].minY = areas[i].bounds[0][0];
+                            shortAreas[i].maxX = areas[i].bounds[0][1];
+                            shortAreas[i].maxY = areas[i].bounds[0][0];
+                            shortAreas[i].name = areas[i].name;
+                            shortAreas[i].type = areas[i].type;
+                            shortAreas[i].dimension = areas[i].dimension;
+                            shortAreas[i].id = areas[i].id;
+                            shortAreas[i].polygon = new Path2D.Double();
+                            for (int coord = 0; coord < areas[i].bounds.length; coord++) {
+                                double x = MapRenderUtils.metersToPixels(areas[i].bounds[coord][1]);
+                                double z = MapRenderUtils.metersToPixels(areas[i].bounds[coord][0]);
+                                if(x < shortAreas[i].minX) shortAreas[i].minX = x;
+                                if(z < shortAreas[i].minY) shortAreas[i].minY = z; // Whoops Y/Z confusion
+                                if(x > shortAreas[i].maxX) shortAreas[i].maxX = x;
+                                if(z > shortAreas[i].maxY) shortAreas[i].maxY = z; // Whoops more Y/Z confusion
+
+                                if (coord == 0) {
+                                    shortAreas[i].polygon.moveTo(x, z);
+                                } else {
+                                    shortAreas[i].polygon.lineTo(x, z);
+                                }
+                            }
+                            shortAreas[i].polygon.closePath();
+                        }
+                        return shortAreas;
+                    } else if (response.statusCode() == 404) {
+                        showToast("Area not found!", "The area may have just been deleted.");
+                    } else {
+                        showToast("Mapper Connect Error", "Problem connecting, try again later!");
+                        LogUtils.error("Failed to fetch areas from PVC Mapper! Code: " + response.statusCode());
+                    }
+                    return new ShortArea[0];
+                })
+                .exceptionally(e -> {
+                    showToast("Mapper Connect Error", "Problem connecting, try again later!");
+                    LogUtils.error("Failed to fetch areas from PVC Mapper!", e);
+                    return new ShortArea[0];
+                });
+        } catch (Exception e) {
+            showToast("Mapper Connect Error", "Problem connecting, try again later!");
+            LogUtils.error("Failed to fetch areas from PVC Mapper!", e);
+            return CompletableFuture.completedFuture(new ShortArea[0]);
+        }
+    }
+
     public CompletableFuture<Network[]> fetchNetworksAsync() {
         String url = String.format("%s/fetch/all-networks", NetworkUtils.API_V1);
         try {
@@ -323,7 +387,36 @@ public class PlayerFetchUtils {
         }
     }
 
-    OrwellMuteCases[] omc;
+    // From/To IDs e.g N4;X30Z-27 or P1
+    public CompletableFuture<DirectionsResponse> fetchDirectionsAsync(String from, String to) {
+        String url = String.format("%s/routemaster/pathfind/%s/%s", NetworkUtils.API_V2, from, to);
+        try {
+            java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
+                .uri(new URI(url))
+                .GET().build();
+            LogUtils.debug("Fetching all networks from: " + request.uri().toString());
+            return NetworkUtils.HTTP_CLIENT.sendAsync(request, java.net.http.HttpResponse.BodyHandlers.ofString())
+                .thenApply(response -> {
+                    if (response.statusCode() == 200) {
+                        Gson gson = new Gson();
+                        DirectionsResponse features = gson.fromJson(response.body(), DirectionsResponse.class);
+                        return features;
+                    }
+                    return new DirectionsResponse();
+                })
+                .exceptionally(e -> {
+                    showToast("Mapper Connect Error", "Check your internet connection?");
+                    LogUtils.error("Failed to get directions from PVC Mapper!", e);
+                    return new DirectionsResponse();
+                });
+        } catch (Exception e) {
+            showToast("Mapper Connect Error", "Check your internet connection?");
+            LogUtils.error("Failed to get directions from PVC Mapper!", e);
+            return CompletableFuture.completedFuture(new DirectionsResponse());
+        }
+    }
+
+    OrwellMuteCases[] omc = new OrwellMuteCases[0];
 
     public CompletableFuture<OrwellMuteCases[]> fetchOrwellMuteCases() {
         String url = String.format("%s/orwell-mute-data.json", NetworkUtils.BASE_URL);
@@ -734,6 +827,7 @@ class SearchResult {
     String name;
     String id;
     String description;
+    String dimension;
     int x;
     int z;
 }
@@ -769,4 +863,36 @@ class OrwellMuteCases {
     String replacewith;
     String angyreplace;
     boolean important;
+}
+
+class DirectionsNodeData {
+    String dimension;
+    String type;
+    String network;
+    int x;
+    int z;
+}
+
+class DirectionsNode {
+    String id;
+    DirectionsNodeData data;
+}
+
+class DirectionsResponse {
+    String status; 
+    String error;
+    DirectionsNode[] path;
+}
+
+class ShortArea {
+    int id;
+    String name;
+    String dimension;
+    double[][] bounds;
+    String type;
+    double minX;
+    double minY;
+    double maxX;
+    double maxY;
+    Path2D polygon;
 }
