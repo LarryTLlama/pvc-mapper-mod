@@ -15,8 +15,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import org.lwjgl.glfw.GLFW;
-
 import com.mojang.blaze3d.platform.InputConstants;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 
@@ -50,11 +48,11 @@ import net.minecraft.world.item.Item;
 
 public class PVCMapperModClient implements ClientModInitializer {
     public Category MOD_CATEGORY = Category.register(ResIdentifier.of("pvcmappermod", "category").get());
-    public KeyMapping OPEN_MAP = new KeyMapping("pvcmappermod.open_map", GLFW.GLFW_KEY_M, MOD_CATEGORY);
-    public KeyMapping OPEN_SHOPS = new KeyMapping("pvcmappermod.open_shops", GLFW.GLFW_KEY_COMMA, MOD_CATEGORY);
-    public KeyMapping MINIMAP_ZOOM_IN = new KeyMapping("pvcmappermod.minimap_zoom_in", GLFW.GLFW_KEY_EQUAL,
+    public KeyMapping OPEN_MAP = new KeyMapping("pvcmappermod.open_map", InputConstants.KEY_M, MOD_CATEGORY);
+    public KeyMapping OPEN_SHOPS = new KeyMapping("pvcmappermod.open_shops", InputConstants.KEY_COMMA, MOD_CATEGORY);
+    public KeyMapping MINIMAP_ZOOM_IN = new KeyMapping("pvcmappermod.minimap_zoom_in", InputConstants.KEY_EQUALS,
             MOD_CATEGORY);
-    public KeyMapping MINIMAP_ZOOM_OUT = new KeyMapping("pvcmappermod.minimap_zoom_out", GLFW.GLFW_KEY_MINUS,
+    public KeyMapping MINIMAP_ZOOM_OUT = new KeyMapping("pvcmappermod.minimap_zoom_out", InputConstants.KEY_MINUS,
             MOD_CATEGORY);
 
     public FullScreenMap fsm;
@@ -207,7 +205,7 @@ public class PVCMapperModClient implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             while (OPEN_MAP.consumeClick()) {
                 // Alt+M (or Alt+Full-screen-map-key) to hide minimap
-                if(InputConstants.isKeyDown(Minecraft.getInstance().getWindow(), GLFW.GLFW_KEY_LEFT_ALT) || InputConstants.isKeyDown(Minecraft.getInstance().getWindow(), GLFW.GLFW_KEY_RIGHT_ALT)) {
+                if(CompatUtils.isKeyDown(InputConstants.KEY_LALT) || CompatUtils.isKeyDown(InputConstants.KEY_RALT)) {
                     if(sp.miniMapEnabled) sp.miniMapEnabled = false;
                     else sp.miniMapEnabled = true;
                     sp.saveSettings();

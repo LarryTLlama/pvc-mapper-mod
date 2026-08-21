@@ -30,7 +30,7 @@ import java.awt.geom.Line2D;
 import java.awt.geom.Rectangle2D;
 import java.time.Instant;
 
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
 
 import com.mojang.authlib.GameProfile;
 import net.minecraft.ChatFormatting;
@@ -106,7 +106,7 @@ public class FullScreenMap extends Screen {
 
     @Override
     public boolean keyPressed(KeyEvent keyEvent) {
-        if (keyEvent.key() == GLFW.GLFW_KEY_ESCAPE) {
+        if (keyEvent.key() == InputConstants.KEY_ESCAPE) {
             if (overlayOpen)
                 overlayOpen = false;
             else

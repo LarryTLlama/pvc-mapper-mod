@@ -37,4 +37,11 @@ public class CompatUtils {
         //?} else {
         /*return net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper.registerKeyMapping(keyMapping);*///?}
     }
+
+    public static boolean isKeyDown(int key) {
+        //? if <26.3 {
+        return com.mojang.blaze3d.platform.InputConstants.isKeyDown(Minecraft.getInstance().getWindow(), key);
+        //?} else {
+        /*return com.mojang.blaze3d.platform.InputConstants.isKeyDown(key);*///?}
+    }
 }
