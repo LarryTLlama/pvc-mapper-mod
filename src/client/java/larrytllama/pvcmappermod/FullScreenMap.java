@@ -126,6 +126,7 @@ public class FullScreenMap extends Screen {
 
     public int x = 0;
     public int z = 0;
+    
     public int minimapTileSize = 120;
 
     Map<String, ResIdentifier> tiles = new HashMap<>();
@@ -964,6 +965,39 @@ public class FullScreenMap extends Screen {
         }
     }
 
+    private void changeMapScale(int zoomDelta, double coordScale) {
+        int oldtilesize = 1 << (17 - zoomlevel);
+        double oldscale = (double) minimapTileSize / oldtilesize;
+        double cx = x + (this.width / 2.0) / oldscale;
+        double cz = z + (this.height / 2.0) / oldscale;
+
+        cx *= coordScale;
+        cz *= coordScale;
+        zoomlevel = Math.max(minZoomLevel, Math.min(maxZoomLevel, zoomlevel + zoomDelta));
+
+        int newtilesize = 1 << (17 - zoomlevel);
+        double newscale = (double) minimapTileSize / newtilesize;
+        x = (int) (cx - (this.width / 2.0) / newscale);
+        z = (int) (cz - (this.height / 2.0) / newscale);
+    }
+
+    private static final String[] DIMENSION_CYCLE = {
+        "minecraft_overworld",
+        "minecraft_the_nether",
+        "minecraft_terra2"
+        // "minecraft_the_end" can be added here
+    };
+
+    private double getDimensionCoordinateScale(String dimension) {
+        // Defines the coordinate scale relative to the Overworld
+        return dimension.equals("minecraft_the_nether") ? 8.0 : 1.0;
+    }
+
+    private int getDimensionZoomOffset(String dimension) {
+        // Defines the base zoom offset relative to the Overworld
+        return dimension.equals("minecraft_the_nether") ? 3 : 0;
+    }
+
     public String getDimensionID() {
         if(Minecraft.getInstance().level == null) return "minecraft_overworld";
         return "minecraft_" + CompatUtils.getIdentifier(Minecraft.getInstance().level.dimension()).getPath();
@@ -1038,24 +1072,27 @@ public class FullScreenMap extends Screen {
         Button dimensionButton = Button.builder(
             Component.literal(pfu.prettyDimensionName(currentDimension)).withStyle(Style.EMPTY.withHoverEvent(new HoverEvent.ShowText(Component.literal("Switch Dimension")))),
             (btn) -> {
-                int tilesize = 1 << (17 - zoomlevel);
-                double scale = (double) minimapTileSize / tilesize;
-                if(currentDimension.equals("minecraft_overworld")) {
-                    currentDimension = "minecraft_the_nether";
-                    // Going from OW to N
-                    x = (int)(x - ((this.width / 2)*scale));
-                    z = (int)(z - ((this.height / 2)*scale));
-                    btn.setMessage(Component.literal("Nether"));
-                } else if(currentDimension.equals("minecraft_the_nether")) {
-                    // Going from N to OW
-                    x = (int)(x - ((this.width / 2)*scale));
-                    z = (int)(z - ((this.height / 2)*scale));
-                    currentDimension = "minecraft_terra2";
-                    btn.setMessage(Component.literal("Terra2"));
-                } else if(currentDimension.equals("minecraft_terra2")) {
-                    currentDimension = "minecraft_overworld";
-                    btn.setMessage(Component.literal("Overworld"));
+                String oldDimension = currentDimension;
+                
+                // Find next dimension in cycle
+                int nextIndex = 0;
+                for (int i = 0; i < DIMENSION_CYCLE.length; i++) {
+                    if (DIMENSION_CYCLE[i].equals(oldDimension)) {
+                        nextIndex = (i + 1) % DIMENSION_CYCLE.length;
+                        break;
+                    }
                 }
+                currentDimension = DIMENSION_CYCLE[nextIndex];
+                btn.setMessage(Component.literal(pfu.prettyDimensionName(currentDimension)));
+
+                double coordScale = getDimensionCoordinateScale(oldDimension) / getDimensionCoordinateScale(currentDimension);
+                int zoomDelta = getDimensionZoomOffset(currentDimension) - getDimensionZoomOffset(oldDimension);
+
+                if (coordScale != 1.0 || zoomDelta != 0) {
+                    // Shifting zoom by 3 steps exactly matches an 8x coordinate scale (2^3 = 8)
+                    changeMapScale(zoomDelta, coordScale);
+                }
+
                 onMouseMove(x, z);
                 resetFeatures();
             }
