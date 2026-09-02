@@ -304,6 +304,16 @@ public class Minimap {
     int lastX = 0;
     int lastZ = 0;
 
+    public boolean playerInCoords(int x1, int z1, int x2, int z2, String dimension, int x, int z) {
+        if(dimension.equals(this.getDimensionNID())) {
+            return x1 < x && x2 > x && z1 < z && z2 > z;
+        } else if(this.getDimensionNID().equals("minecraft_overworld")) {
+            return x1 < x*8 && x2 > x*8 && z1 < z*8 && z2 > z*8;
+        } else {
+            return x1 < x/8 && x2 > x/8 && z1 < z/8 && z2 > z/8;
+        }
+    }
+
     public void render(/*? if <26.1 {*/GuiGraphics/*?} else {*//*GuiGraphicsExtractor*//*?}*/ context, DeltaTracker tickCounter) {
         tickAccumulator += tickCounter.getRealtimeDeltaTicks();
         if(!sp.miniMapEnabled) return;
@@ -633,7 +643,7 @@ public class Minimap {
             // If player is us, ignore. We know our whole life story already
             if(mc.player.getName().equals(Component.literal(player.name))) continue;
             // If player isn't in our space, ignore
-            if ((player.x > minX && player.x < maxX) && (player.z > minZ && player.z < maxZ)) {
+            if (playerInCoords(minX, minZ, maxX, maxZ, player.world, player.x, player.z)) {
                 // Draw their marker - Sort rotation
                 double offsetFromPlayerX;
                 double offsetFromPlayerZ;
