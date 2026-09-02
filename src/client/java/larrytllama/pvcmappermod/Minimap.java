@@ -700,12 +700,13 @@ public class Minimap {
                         getTooltipPlayer(player.uuid, player.name);
                         renderMinimapTooltipPlayer(context,
                             List.of(
-                                String.format("%s%s", 
-                                    player.name, 
-                                    player.afksince != null && ((Instant.now().toEpochMilli() - Instant.parse(player.afksince).toEpochMilli()) / 60000) > 2 ? " (AFK)" : ""
-                                ),
+                                player.name,
                                 String.format("%d, %d, %d in %s", player.x, player.y, player.z, prettyDimensionName(player.world)),
-                                String.format("Health: %.1f, Armor: %.1f", player.health, player.armor)
+                                String.format("Health: %.1f, Armor: %.1f", player.health, player.armor),
+                                player.afksince != null && 
+                                    ((Instant.now().toEpochMilli() - Instant.parse(player.afksince).toEpochMilli()) / 60000) > 2 
+                                    ? String.format("AFK for %d mins", (Instant.now().toEpochMilli() - Instant.parse(player.afksince).toEpochMilli()) / 60000)
+                                    : "Currently Active"
                             )
                         );
                     }

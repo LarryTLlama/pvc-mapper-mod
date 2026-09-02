@@ -477,13 +477,14 @@ public class FullScreenMap extends Screen {
     public void drawPlayerTooltip(/*? if <26.1 {*/GuiGraphics/*?} else {*//*GuiGraphicsExtractor*//*?}*/ context, PlayerFetch player, int x, int y) {
 
         List<MutableComponent> content = List.of(
-                Component.literal(player.name)
-                    .withStyle(Style.EMPTY.withBold(true))
-                    .append(
-                        Component.literal(player.afksince != null && ((Instant.now().toEpochMilli() - Instant.parse(player.afksince).toEpochMilli()) / 60000) > 2 ? " (AFK)" : "").withStyle(Style.EMPTY.withColor(ChatFormatting.RED))
-                    ),
+                Component.literal(player.name).withStyle(ChatFormatting.BOLD),
                 Component.literal(player.x + ", " + player.z + " - " + pfu.prettyDimensionName(player.world)),
-                Component.literal("Health: " + (player.health / 2) + "/10 - Armor: " + (player.armor / 2) + "/10"));
+                Component.literal("Health: " + (player.health / 2) + "/10 - Armor: " + (player.armor / 2) + "/10"),
+                player.afksince != null && 
+                    ((Instant.now().toEpochMilli() - Instant.parse(player.afksince).toEpochMilli()) / 60000) > 2 
+                    ? Component.literal(String.format("AFK for %d mins", (Instant.now().toEpochMilli() - Instant.parse(player.afksince).toEpochMilli()) / 60000)) 
+                    : Component.literal("Currently Active")
+            );
         
         MapRenderUtils.drawTooltipComponent(context, content, x + TooltipRenderUtil.PADDING_LEFT, y + TooltipRenderUtil.PADDING_TOP);
         if (hoverPlayerName != player.name) {
