@@ -47,6 +47,7 @@ import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.Style;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.level.block.Blocks;
 
 public class PVCMapperModClient implements ClientModInitializer {
     public Category MOD_CATEGORY = Category.register(ResIdentifier.of("pvcmappermod", "category").get());
@@ -122,6 +123,9 @@ public class PVCMapperModClient implements ClientModInitializer {
             .append(Component.literal("AFK").withStyle(Style.EMPTY.withBold(true).withColor(ChatFormatting.RED)))
             .append(Component.literal("] ").withStyle(Style.EMPTY.withColor(ChatFormatting.DARK_GRAY)))
     };
+
+
+    boolean wasInPortal = false;
 
     @Override
     public void onInitializeClient() {
@@ -204,7 +208,20 @@ public class PVCMapperModClient implements ClientModInitializer {
         MINIMAP_ZOOM_IN = CompatUtils.registerKey(MINIMAP_ZOOM_IN);
         MINIMAP_ZOOM_OUT = CompatUtils.registerKey(MINIMAP_ZOOM_OUT);
         fsm = FullScreenMap.createScreen(Component.literal("PVC Mapper - Map View"), pfu, sp);
+
+        
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            // Auto-upload nether portals
+            if(sp.collectData == true && client.player != null && client.level != null && client.level.getBlockState(client.player.blockPosition()).is(Blocks.NETHER_PORTAL)) {
+                System.out.println("Found in portal!");
+                if(!this.wasInPortal) {
+                    System.out.println("Uploading portal!");
+                    this.wasInPortal = true;
+                    pfu.publishNetherPortal(client.player.getStringUUID(), client.player.getBlockX(), client.player.getBlockY(), client.player.getBlockZ());
+                }
+            } else {
+                this.wasInPortal = false;
+            }
             while (OPEN_MAP.consumeClick()) {
                 // Alt+M (or Alt+Full-screen-map-key) to hide minimap
                 if(InputConstants.isKeyDown(Minecraft.getInstance().getWindow(), GLFW.GLFW_KEY_LEFT_ALT) || InputConstants.isKeyDown(Minecraft.getInstance().getWindow(), GLFW.GLFW_KEY_RIGHT_ALT)) {

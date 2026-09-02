@@ -5,6 +5,7 @@ import larrytllama.pvcmappermod.utils.*;
 import java.io.FileNotFoundException;
 import java.lang.reflect.Type;
 import java.net.URI;
+import java.net.http.HttpRequest.BodyPublisher;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
@@ -55,6 +56,20 @@ public class PlayerFetchUtils {
             )
         );
         
+    }
+
+    public void publishNetherPortal(String uuid, int x, int y, int z) {
+        try {
+            java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
+                .uri(new URI(NetworkUtils.API_V2 + "/create/quickadd/automatic"))
+                .header("Content-Type", "application/json")
+                .POST(java.net.http.HttpRequest.BodyPublishers.ofString(String.format("{\"x\": %d, \"y\": %d, \"z\": %d, \"uuid\": \"%s\"}", x, y, z, uuid)))
+                .build();
+            NetworkUtils.HTTP_CLIENT.sendAsync(request, java.net.http.HttpResponse.BodyHandlers.ofString());
+        } catch(Exception e) {
+            System.out.println("Couldn't publish nether portal...");
+            System.out.println(e);
+        }
     }
 
     private int errorCount;
