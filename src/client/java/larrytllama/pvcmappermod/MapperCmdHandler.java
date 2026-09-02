@@ -241,35 +241,43 @@ public class MapperCmdHandler {
                 ClientCommandManager.literal("afksince").then(ClientCommandManager.argument("player", StringArgumentType.greedyString())
                 .suggests(this.PLAYER_SUGGESTIONS)
                 .executes((context) -> {
-                    ArrayList<PlayerFetch> p = pfu.getPlayers();
-                    for (int i = 0; i < p.size(); i++) {
-                        if(p.get(i).name.toLowerCase().contains(StringArgumentType.getString(context, "player").toLowerCase())) {
-                            MutableComponent response = Component.literal(p.get(i).name).withStyle(Style.EMPTY.withColor(ChatFormatting.GREEN));
-                            Instant afkSince = Instant.parse(p.get(i).afksince);
-                            Duration dur = Duration.between(afkSince, Instant.now()).abs();
-                            if(dur.toMinutes() < 2) {
-                                response.append(Component.literal(" is ").withStyle(ChatFormatting.YELLOW));
-                                response.append(Component.literal("NOT AFK").withStyle(ChatFormatting.RED));
-                                response.append(Component.literal(".").withStyle(ChatFormatting.YELLOW));
-                            } else {
-                                response.append(Component.literal(" has been AFK for: ").withStyle(ChatFormatting.YELLOW));
-                                String timelength = "";
-                                if (dur.toDaysPart() > 0) timelength += dur.toDaysPart() + " days, " ;
-                                if (dur.toHoursPart() > 0) timelength += dur.toHoursPart() + " hours, ";
-                                if (dur.toMinutesPart() > 0) timelength += dur.toMinutesPart() + " mins, ";
-                                if (dur.toSecondsPart() > 0) timelength += dur.toSecondsPart() + " secs";
-                                response.append(Component.literal(timelength).withStyle(ChatFormatting.RED));
+                    try {
+                        ArrayList<PlayerFetch> p = pfu.getPlayers();
+                        for (int i = 0; i < p.size(); i++) {
+                            if(p.get(i).name.toLowerCase().contains(StringArgumentType.getString(context, "player").toLowerCase())) {
+                                MutableComponent response = Component.literal(p.get(i).name).withStyle(Style.EMPTY.withColor(ChatFormatting.GREEN));
+                                Instant afkSince = Instant.parse(p.get(i).afksince);
+                                Duration dur = Duration.between(afkSince, Instant.now()).abs();
+                                if(dur.toMinutes() < 2) {
+                                    response.append(Component.literal(" is ").withStyle(ChatFormatting.YELLOW));
+                                    response.append(Component.literal("NOT AFK").withStyle(ChatFormatting.RED));
+                                    response.append(Component.literal(".").withStyle(ChatFormatting.YELLOW));
+                                } else {
+                                    response.append(Component.literal(" has been AFK for: ").withStyle(ChatFormatting.YELLOW));
+                                    String timelength = "";
+                                    if (dur.toDaysPart() > 0) timelength += dur.toDaysPart() + " days, " ;
+                                    if (dur.toHoursPart() > 0) timelength += dur.toHoursPart() + " hours, ";
+                                    if (dur.toMinutesPart() > 0) timelength += dur.toMinutesPart() + " mins, ";
+                                    if (dur.toSecondsPart() > 0) timelength += dur.toSecondsPart() + " secs";
+                                    response.append(Component.literal(timelength).withStyle(ChatFormatting.RED));
+                                }
+                                Minecraft.getInstance().execute(() -> {
+                                    context.getSource().sendFeedback(response);
+                                });
+                                return 1;
                             }
-                            Minecraft.getInstance().execute(() -> {
-                                context.getSource().sendFeedback(response);
-                            });
-                            return 1;
                         }
+                        Minecraft.getInstance().execute(() -> {
+                            context.getSource().sendFeedback(Component.literal("That player was not found online."));
+                        });
+                        return 1;
+                    } catch(Exception e) {
+                        System.out.println(e);
+                        Minecraft.getInstance().execute(() -> {
+                            context.getSource().sendFeedback(Component.literal("An unknown exception occurred when checking for player AFK-ness"));
+                        });
+                        return 1;
                     }
-                    Minecraft.getInstance().execute(() -> {
-                        context.getSource().sendFeedback(Component.literal("That player was not found online."));
-                    });
-                    return 1;
                 }))
             );
         });
