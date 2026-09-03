@@ -6,6 +6,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -14,6 +15,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.lwjgl.glfw.GLFW;
 
@@ -46,6 +49,8 @@ import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents.Modi
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.Style;
+import net.minecraft.network.chat.contents.PlainTextContents.LiteralContents;
+import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Blocks;
 
@@ -377,8 +382,87 @@ public class PVCMapperModClient implements ClientModInitializer {
         return false;
     }
 
+    // Crawl through a string and add hover details to player names
+    private Component addPlayerDetailsToChat(Component message) {
+        System.out.println("node: " + message.getString());
+        System.out.println("style: " + message.getStyle());
+        MutableComponent out = Component.empty(); // Start with empty message
+        // Don't override existing hovering
+        if (out.getStyle().getHoverEvent() == null) {
+            // If the message has siblings, move down the tree
+            if (message.getContents() instanceof TranslatableContents translatable) {
+                if(!translatable.getKey().equals("%s")) { // Ignore non-chat messages
+                    return message;
+                }
+                for (Object arg : translatable.getArgs()) {
+                    if (arg instanceof Component component) {
+                        out.append(addPlayerDetailsToChat(component));
+                    } else if (arg instanceof String string) {
+                        out.append(Component.literal(string));
+                    }
+                }
+            } else if (message.getSiblings().size() > 0) {
+                if (message.getContents() instanceof LiteralContents literal) {
+                    out = Component.literal(literal.text()).withStyle(message.getStyle());
+                }
+                for (Component child : message.getSiblings()) {
+                    out.append(addPlayerDetailsToChat(child));
+                }
+            // If the message doesn't have siblings, check its text for players
+            } else {
+
+                // Do a check to see if any player names are in this message
+                PlayerFetch foundplayer = null;
+                for (PlayerFetch player : pfu.getPlayers()) {
+                    if (
+                        message.getString().contains(player.name) ||
+                        (player.nickname != null && message.getString().contains(player.nickname))
+                    ) {
+                        foundplayer = player;
+                        break;
+                    }
+                }
+                
+                if(foundplayer != null) {
+                    out.append(message.copy().withStyle(message.getStyle().withHoverEvent(
+                        new HoverEvent.ShowText(Component.empty()
+                            .append(Component.literal(foundplayer.name).withStyle(Style.EMPTY.withBold(true)))
+                            .append(Component.literal( (foundplayer.nickname!=null?" ("+foundplayer.nickname+")":"") + "\n" ).setStyle(Style.EMPTY.withColor(ChatFormatting.GRAY)))
+                            .append(Component.literal(String.format("%d, %d, %d in %s\n",foundplayer.x,foundplayer.y,foundplayer.z, minimap.prettyDimensionName(foundplayer.world))))
+                            .append(Component.literal(
+                                foundplayer.isAFK 
+                                ? String.format("AFK for %d mins", (Instant.now().toEpochMilli() - Instant.parse(foundplayer.afksince).toEpochMilli()) / 60000)
+                                : "Currently Active" 
+                            )
+                        )
+                        )
+                    )));
+                } else {
+                    out.append(message);
+                }
+            }
+        }
+        return out;
+    }
+
     private ModifyGame messageRunner = (message, overlay) -> {
-        if(sp.orwellMeter == OrwellianMeter.ALL) return message;
+        
+        // If a game chat message
+        if(message.getContents() instanceof TranslatableContents translatable) {
+            // Helpfully, PVC's chat system adds this in for anti-chat reporting. Thank you Nem <3
+            // P.S Please don't change it
+            if(translatable.getKey().equals("%s")) { 
+                System.out.println(message);
+                return addPlayerDetailsToChat(message);
+            }
+        }
+        
+        System.out.println("Original: "+message);
+        if(sp.orwellMeter == OrwellianMeter.ALL) {
+            Component out = message;
+            System.out.println(out);
+            return out;
+        }
         // Orwell message types:
         
         String text = message.getString();
@@ -431,7 +515,7 @@ public class PVCMapperModClient implements ClientModInitializer {
                     return message;
                 }
             }
-            return message.copy().withStyle(Style.EMPTY.withHoverEvent(new HoverEvent.ShowText(Component.literal("This bot message wasn't included in the Mapper's orwell-muting database.\nThink it should be? Send Larry a DM!\nInclude the *exact* content!"))));
+            return message;
         }
         return message;
     };

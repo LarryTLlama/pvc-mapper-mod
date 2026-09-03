@@ -57,6 +57,9 @@ class PlayerFetch {
     Float pitch;
     Float roll;
     String afksince;
+    String nickname;
+    boolean isAFK;
+    String[] ranks;
 }
 
 class PlaceFetch {
@@ -184,7 +187,7 @@ public class Minimap {
     public static final ResIdentifier MAP_BG = ResIdentifier.of("minecraft",
             "textures/gui/menu_background.png");
 
-    private String prettyDimensionName(String dimension) {
+    public String prettyDimensionName(String dimension) {
         switch (dimension) {
             case "minecraft_overworld":
                 return "Overworld";
