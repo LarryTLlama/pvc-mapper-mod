@@ -657,7 +657,7 @@ public class PlayerFetchUtils {
                         Gson gson = new Gson();
                         VersionHistory[] vh = gson.fromJson(response.body(), VersionHistory[].class);
                         for (int i = 0; i < vh.length; i++) {
-                            if(vh[i].mcVersion.equals(McVersionName)) {
+                            if((vh[i].mcVersion != null && vh[i].mcVersion.equals(McVersionName)) || (vh[i].multiversion)) { // Kinda can't be bothered to write the GSON parser so if it's multiversion just say yeahhh
                                 LogUtils.debug("Version for this MC version is found! v" + vh[i].version);
                                 final String newVersion = vh[i].version;
                                 if(!newVersion.equals(MapperModVersionName)) {
@@ -854,6 +854,7 @@ class VersionHistory {
     String dateReleased;
     String whatsNew;
     String url;
+    boolean multiversion;
 }
 
 class NetworkEdges {
