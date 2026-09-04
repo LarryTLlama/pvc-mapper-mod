@@ -50,6 +50,12 @@ public class SettingsProvider {
 
     public boolean showLeavingPopup = true;
 
+    public boolean showPlaces = true;    
+    public boolean showAreas = true;    
+    public boolean showNetworks = true;    
+    public boolean showPlayers = true;    
+    public boolean showClaims = false;    
+
     Path path = FabricLoader.getInstance().getConfigDir().resolve("pvcmapper.json");
 
     public SettingsProvider() {
@@ -76,6 +82,11 @@ public class SettingsProvider {
                 if(settingsFromFile.orwellMeter != null) orwellMeter = settingsFromFile.orwellMeter;
                 showWelcomePopup = settingsFromFile.showWelcomePopup;
                 showLeavingPopup = settingsFromFile.showLeavingPopup;
+                showPlaces = settingsFromFile.showPlaces;
+                showAreas = settingsFromFile.showAreas;
+                showNetworks = settingsFromFile.showNetworks;
+                showPlayers = settingsFromFile.showPlayers;
+                showClaims = settingsFromFile.showClaims;
             } catch(Exception e) {
                 LogUtils.error("Couldn't read settings file", e);
                 new SystemToast(SystemToastId.FILE_DROP_FAILURE, Component.literal("PVC Mapper Settings Error"), Component.literal("Couldn't open the Setting file, check you have permissions to access it!"));
@@ -113,6 +124,11 @@ public class SettingsProvider {
         settingsToSet.orwellMeter = orwellMeter;
         settingsToSet.showWelcomePopup = showWelcomePopup;
         settingsToSet.showLeavingPopup = showLeavingPopup;
+        settingsToSet.showPlaces = showPlaces;
+        settingsToSet.showAreas = showAreas;
+        settingsToSet.showNetworks = showNetworks;
+        settingsToSet.showPlayers = showPlayers;
+        settingsToSet.showClaims = showClaims;
         try {
             LogUtils.debug("Writing to settings!" + path.getParent().toString());
             Files.createDirectories(path.getParent());
@@ -143,6 +159,11 @@ class SettingsJSON {
     OrwellianMeter orwellMeter = OrwellianMeter.SMART;
     boolean showWelcomePopup = true;
     boolean showLeavingPopup = true;
+    boolean showPlaces = true;
+    boolean showAreas = true;
+    boolean showNetworks = true;
+    boolean showPlayers = true;
+    boolean showClaims = false;
 }
 
 enum MiniMapPositions {

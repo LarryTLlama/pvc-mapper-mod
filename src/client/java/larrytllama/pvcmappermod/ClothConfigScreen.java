@@ -42,6 +42,11 @@ public class ClothConfigScreen extends Screen {
     private EnumListEntry<OrwellianMeter> orwellMeter;
     private BooleanListEntry showWelcomePopup;
     private BooleanListEntry showLeavingPopup;
+    private BooleanListEntry showPlaces;
+    private BooleanListEntry showAreas;
+    private BooleanListEntry showNetworks;
+    private BooleanListEntry showPlayers;
+    private BooleanListEntry showClaims;
 
     public Screen getClothConfig(Screen parent) {
         ConfigBuilder builder = ConfigBuilder.create()
@@ -61,6 +66,13 @@ public class ClothConfigScreen extends Screen {
             sp.orwellMeter = this.orwellMeter.getValue();
             sp.showWelcomePopup = this.showWelcomePopup.getValue();
             sp.showLeavingPopup = this.showLeavingPopup.getValue();
+
+            sp.showPlaces = this.showPlaces.getValue();
+            sp.showAreas = this.showAreas.getValue();
+            sp.showNetworks = this.showNetworks.getValue();
+            sp.showPlayers = this.showPlayers.getValue();
+            sp.showClaims = this.showClaims.getValue();
+
             sp.saveSettings();
         })
         .setTitle(Component.literal("PVC Mapper Mod Settings"));
@@ -111,6 +123,31 @@ public class ClothConfigScreen extends Screen {
 
         alertSettings.addEntry(
             entryBuilder.startTextDescription(Component.literal("You'll always be alerted when you disconnect from the Mapper server.")).build()
+        );
+
+        ConfigCategory filterSettings = builder.getOrCreateCategory(Component.literal("Filters"));
+        this.showPlaces = entryBuilder.startBooleanToggle(Component.literal("Show Places"), sp.showPlaces)
+            .setDefaultValue(true)
+            .setTooltip(Component.literal("Show places (banner icons) on minimap and map screen."))
+            .build();
+        filterSettings.addEntry(this.showPlaces);
+        this.showAreas = entryBuilder.startBooleanToggle(Component.literal("Show Areas"), sp.showAreas)
+            .setDefaultValue(true)
+            .setTooltip(Component.literal("Show area labels on minimap and map screen."))
+            .build();
+        filterSettings.addEntry(this.showAreas);
+        this.showNetworks = entryBuilder.startBooleanToggle(Component.literal("Show Networks"), sp.showNetworks)
+            .setDefaultValue(true)
+            .setTooltip(Component.literal("Show network lines and labels on minimap and map screen."))
+            .build();
+        filterSettings.addEntry(this.showNetworks);
+        this.showPlayers = entryBuilder.startBooleanToggle(Component.literal("Show Players"), sp.showPlayers)
+            .setDefaultValue(true)
+            .setTooltip(Component.literal("Show player markers on minimap and map screen."))
+            .build();
+        filterSettings.addEntry(this.showPlayers);
+        filterSettings.addEntry(
+            entryBuilder.startTextDescription(Component.literal("You can also change these settings in the map menu by clicking the filters button.")).build()
         );
 
         ConfigCategory miscSettings = builder.getOrCreateCategory(Component.literal("Miscellaneous Settings"));
