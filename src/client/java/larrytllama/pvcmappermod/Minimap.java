@@ -553,7 +553,7 @@ public class Minimap {
         }
         this.lastX = mc.player.getBlockX();
         this.lastZ = mc.player.getBlockZ();
-        if(!sp.hideMinimapNetworks) {
+        if(sp.showNetworks) {
             for (int i = 0; i < transportNetwork.getSegments().size(); i++) {
                 TransportNetwork.Segment line = transportNetwork.getSegments().get(i);
                 MapRenderUtils.drawLine(context, (int)line.coords[0][0] + topLeftZ, (int)line.coords[0][1] + topLeftX, (int)line.coords[1][0] + topLeftZ, (int)line.coords[1][1] + topLeftX, line.colour);
@@ -578,60 +578,62 @@ public class Minimap {
         int minZ = (int) (z) - (tilesize / 2);
         int maxX = (int) (x) + (tilesize / 2);
         int maxZ = (int) (z) + (tilesize / 2);
-        for (int i = 0; i < placesList.size(); i++) {
-            PlaceFetch place = placesList.get(i);
-            int placeX = Integer.parseInt(place.x);
-            int placeZ = Integer.parseInt(place.z);
-            if ((placeX > minX && placeX < maxX) && (placeZ > minZ && placeZ < maxZ)) {
-                context.pose().pushMatrix();
-                double offsetFromPlayerX = (x - placeX) * scale;
-                double offsetFromPlayerZ = (z - placeZ) * scale;
-                float translateX = (float) ((topLeftX + (minimapTileSize / 2)) - offsetFromPlayerX);
-                float translateZ = (float) ((topLeftZ + (minimapTileSize / 2)) - offsetFromPlayerZ);
-                context.pose().translate(translateX, translateZ);
-                context.pose().translate(-4, -4);
-                ResIdentifier placeMarkerChoice;
-                switch (place.type) {
-                    case "farm":
-                    case "landmark":
-                    case "museum":
-                    case "lighthouse":
-                        placeMarkerChoice = LANDMARK_BANNER;
-                        break;
-                    case "shop":
-                    case "mall":
-                        placeMarkerChoice = SHOP_BANNER;
-                        break;
-                    case "union":
-                    case "base":
-                    case "town":
-                        placeMarkerChoice = BASE_BANNER;
-                        break;
-                    case "event":
-                    case "pvp":
-                        placeMarkerChoice = EVENT_BANNER;
-                        break;
-                    default:
-                        placeMarkerChoice = GRAY_BANNER;
-                        break;
-                }
-                context.blit(
-                        RenderPipelines.GUI_TEXTURED,
-                        placeMarkerChoice.get(),
-                        0, 0, 0, 0, 8, 8, 8, 8);
-                context.pose().popMatrix();
+        if(sp.showPlaces) {
+            for (int i = 0; i < placesList.size(); i++) {
+                PlaceFetch place = placesList.get(i);
+                int placeX = Integer.parseInt(place.x);
+                int placeZ = Integer.parseInt(place.z);
+                if ((placeX > minX && placeX < maxX) && (placeZ > minZ && placeZ < maxZ)) {
+                    context.pose().pushMatrix();
+                    double offsetFromPlayerX = (x - placeX) * scale;
+                    double offsetFromPlayerZ = (z - placeZ) * scale;
+                    float translateX = (float) ((topLeftX + (minimapTileSize / 2)) - offsetFromPlayerX);
+                    float translateZ = (float) ((topLeftZ + (minimapTileSize / 2)) - offsetFromPlayerZ);
+                    context.pose().translate(translateX, translateZ);
+                    context.pose().translate(-4, -4);
+                    ResIdentifier placeMarkerChoice;
+                    switch (place.type) {
+                        case "farm":
+                        case "landmark":
+                        case "museum":
+                        case "lighthouse":
+                            placeMarkerChoice = LANDMARK_BANNER;
+                            break;
+                        case "shop":
+                        case "mall":
+                            placeMarkerChoice = SHOP_BANNER;
+                            break;
+                        case "union":
+                        case "base":
+                        case "town":
+                            placeMarkerChoice = BASE_BANNER;
+                            break;
+                        case "event":
+                        case "pvp":
+                            placeMarkerChoice = EVENT_BANNER;
+                            break;
+                        default:
+                            placeMarkerChoice = GRAY_BANNER;
+                            break;
+                    }
+                    context.blit(
+                            RenderPipelines.GUI_TEXTURED,
+                            placeMarkerChoice.get(),
+                            0, 0, 0, 0, 8, 8, 8, 8);
+                    context.pose().popMatrix();
 
-                // Render tooltip if being hovered
-                if (mouseIsInMap && !tooltipApplied) {
-                    if (mouseX > translateX - 4 && mouseX < translateX + 4 && mouseY > translateZ - 4
-                            && mouseY < translateZ + 4) {
-                        tooltipApplied = true;
-                        renderMinimapTooltip(
-                                context,
-                                List.of(
-                                        String.format("%s (P%d): Type: %s", place.name, place.id, place.type),
-                                        String.format("%s, %s in %s", place.x, place.z,
-                                                prettyDimensionName(place.dimension))));
+                    // Render tooltip if being hovered
+                    if (mouseIsInMap && !tooltipApplied) {
+                        if (mouseX > translateX - 4 && mouseX < translateX + 4 && mouseY > translateZ - 4
+                                && mouseY < translateZ + 4) {
+                            tooltipApplied = true;
+                            renderMinimapTooltip(
+                                    context,
+                                    List.of(
+                                            String.format("%s (P%d): Type: %s", place.name, place.id, place.type),
+                                            String.format("%s, %s in %s", place.x, place.z,
+                                                    prettyDimensionName(place.dimension))));
+                        }
                     }
                 }
             }
@@ -639,84 +641,85 @@ public class Minimap {
 
         
         ArrayList<PlayerFetch> playersList = pfu.getPlayers();
-
-        // Now do the other players
-        for (int i = 0; i < playersList.size(); i++) {
-            PlayerFetch player = playersList.get(i);
-            // If player is us, ignore. We know our whole life story already
-            if(mc.player.getName().equals(Component.literal(player.name))) continue;
-            // If player isn't in our space, ignore
-            if (playerInCoords(minX, minZ, maxX, maxZ, player.world, player.x, player.z)) {
-                // Draw their marker - Sort rotation
-                double offsetFromPlayerX;
-                double offsetFromPlayerZ;
-                context.pose().pushMatrix();
-                
-                ResIdentifier playerMarkerChoice;
-                switch (player.world) {
-                    case "minecraft_overworld":
-                        if(getDimensionNID().equals("minecraft_overworld")) {
+        if(sp.showPlayers) {
+            // Now do the other players
+            for (int i = 0; i < playersList.size(); i++) {
+                PlayerFetch player = playersList.get(i);
+                // If player is us, ignore. We know our whole life story already
+                if(mc.player.getName().equals(Component.literal(player.name))) continue;
+                // If player isn't in our space, ignore
+                if (playerInCoords(minX, minZ, maxX, maxZ, player.world, player.x, player.z)) {
+                    // Draw their marker - Sort rotation
+                    double offsetFromPlayerX;
+                    double offsetFromPlayerZ;
+                    context.pose().pushMatrix();
+                    
+                    ResIdentifier playerMarkerChoice;
+                    switch (player.world) {
+                        case "minecraft_overworld":
+                            if(getDimensionNID().equals("minecraft_overworld")) {
+                                offsetFromPlayerX = (x - player.x) * scale;
+                                offsetFromPlayerZ = (z - player.z) * scale;
+                            } else {
+                                offsetFromPlayerX = (x - (player.x/8)) * scale;
+                                offsetFromPlayerZ = (z - (player.z/8)) * scale;
+                            }
+                            playerMarkerChoice = OTHER_PLAYERS_OW;
+                            break;
+                        case "minecraft_the_nether":
+                            if(getDimensionNID().equals("minecraft_overworld")) {
+                                offsetFromPlayerX = (x - (player.x*8)) * scale;
+                                offsetFromPlayerZ = (z - (player.z*8)) * scale;
+                            } else {
+                                offsetFromPlayerX = (x - player.x) * scale;
+                                offsetFromPlayerZ = (z - player.z) * scale;
+                            }
+                            playerMarkerChoice = OTHER_PLAYERS_NETHER;
+                            break;
+                        default:
                             offsetFromPlayerX = (x - player.x) * scale;
                             offsetFromPlayerZ = (z - player.z) * scale;
-                        } else {
-                            offsetFromPlayerX = (x - (player.x/8)) * scale;
-                            offsetFromPlayerZ = (z - (player.z/8)) * scale;
-                        }
-                        playerMarkerChoice = OTHER_PLAYERS_OW;
-                        break;
-                    case "minecraft_the_nether":
-                        if(getDimensionNID().equals("minecraft_overworld")) {
-                            offsetFromPlayerX = (x - (player.x*8)) * scale;
-                            offsetFromPlayerZ = (z - (player.z*8)) * scale;
-                        } else {
-                            offsetFromPlayerX = (x - player.x) * scale;
-                            offsetFromPlayerZ = (z - player.z) * scale;
-                        }
-                        playerMarkerChoice = OTHER_PLAYERS_NETHER;
-                        break;
-                    default:
-                        offsetFromPlayerX = (x - player.x) * scale;
-                        offsetFromPlayerZ = (z - player.z) * scale;
-                        playerMarkerChoice = OTHER_PLAYERS_SOMEWHERE;
-                        break;
-                }
-                
-                float translateX = (float) ((topLeftX + (minimapTileSize / 2)) - offsetFromPlayerX);
-                float translateZ = (float) (topLeftZ + (minimapTileSize / 2) - offsetFromPlayerZ);
-                context.enableScissor(topLeftX - 4, topLeftZ - 4, topLeftX + minimapTileSize + 4, topLeftZ + minimapTileSize + 4);
-                context.pose().translate(translateX, translateZ);
-                context.pose().rotate((float) Math.toRadians(player.yaw - 180));
-                context.pose().translate(-4, -4);
-                // Now draw their marker
-                context.blit(
-                        RenderPipelines.GUI_TEXTURED,
-                        playerMarkerChoice.get(),
-                        0, 0, 0, 0, 8, 8, 8, 8);
-
-                context.pose().popMatrix();
-
-                context.disableScissor();
-                // Render tooltip if being hovered
-                if (!tooltipApplied && mouseIsInMap) {
-                    if (mouseX > translateX - 4 && mouseX < translateX + 4 && mouseY > translateZ - 4 && mouseY < translateZ + 4) {
-                        tooltipApplied = true;
-                        getTooltipPlayer(player.uuid, player.name);
-                        renderMinimapTooltipPlayer(context,
-                            List.of(
-                                player.name,
-                                String.format("%d, %d, %d in %s", player.x, player.y, player.z, prettyDimensionName(player.world)),
-                                String.format("Health: %.1f, Armor: %.1f", player.health, player.armor),
-                                player.afksince != null && 
-                                    ((Instant.now().toEpochMilli() - Instant.parse(player.afksince).toEpochMilli()) / 60000) > 2 
-                                    ? String.format("AFK for %d mins", (Instant.now().toEpochMilli() - Instant.parse(player.afksince).toEpochMilli()) / 60000)
-                                    : "Currently Active"
-                            )
-                        );
+                            playerMarkerChoice = OTHER_PLAYERS_SOMEWHERE;
+                            break;
                     }
+
+                    float translateX = (float) ((topLeftX + (minimapTileSize / 2)) - offsetFromPlayerX);
+                    float translateZ = (float) (topLeftZ + (minimapTileSize / 2) - offsetFromPlayerZ);
+                    context.enableScissor(topLeftX - 4, topLeftZ - 4, topLeftX + minimapTileSize + 4, topLeftZ + minimapTileSize + 4);
+                    context.pose().translate(translateX, translateZ);
+                    context.pose().rotate((float) Math.toRadians(player.yaw - 180));
+                    context.pose().translate(-4, -4);
+                    // Now draw their marker
+                    context.blit(
+                            RenderPipelines.GUI_TEXTURED,
+                            playerMarkerChoice.get(),
+                            0, 0, 0, 0, 8, 8, 8, 8);
+
+                    context.pose().popMatrix();
+
+                    context.disableScissor();
+                    // Render tooltip if being hovered
+                    if (!tooltipApplied && mouseIsInMap) {
+                        if (mouseX > translateX - 4 && mouseX < translateX + 4 && mouseY > translateZ - 4 && mouseY < translateZ + 4) {
+                            tooltipApplied = true;
+                            getTooltipPlayer(player.uuid, player.name);
+                            renderMinimapTooltipPlayer(context,
+                                List.of(
+                                    player.name,
+                                    String.format("%d, %d, %d in %s", player.x, player.y, player.z, prettyDimensionName(player.world)),
+                                    String.format("Health: %.1f, Armor: %.1f", player.health, player.armor),
+                                    player.afksince != null && 
+                                        ((Instant.now().toEpochMilli() - Instant.parse(player.afksince).toEpochMilli()) / 60000) > 2 
+                                        ? String.format("AFK for %d mins", (Instant.now().toEpochMilli() - Instant.parse(player.afksince).toEpochMilli()) / 60000)
+                                        : "Currently Active"
+                                )
+                            );
+                        }
+                    }
+
                 }
 
             }
-
         }
 
 
@@ -740,7 +743,7 @@ public class Minimap {
         );
         context.pose().popMatrix();
 
-        if(!tooltipApplied && sp.minimapScale == 1.0 && /*? if <26.2 {*/mc.screen/*?} else {*//*mc.gui.screen()*//*?}*/ instanceof ChatScreen) {
+        if(!tooltipApplied && sp.minimapScale == 1.0 && (sp.showPlaces || sp.showPlayers) && /*? if <26.2 {*/mc.screen/*?} else {*//*mc.gui.screen()*//*?}*/ instanceof ChatScreen) {
             renderMinimapTooltip(context, List.of("Hover over the minimap's icons", "to view player or place details!"));
         }
 
