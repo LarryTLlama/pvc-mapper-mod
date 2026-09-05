@@ -915,10 +915,12 @@ public class FullScreenMap extends Screen {
                         break;
                     case "portal":
                         placeId = "SP" + shownFeatures[hoveredPlaceIndex].id;
+                        showTooltip = true;
                         // TODO: Filter for portals
                         break;
                     default:
                         placeId = "" + shownFeatures[hoveredPlaceIndex].id;
+                        showTooltip = true;
                         // TODO: Filter for whatever these are ¯\_(ツ)_/¯
                         break;
                 }
