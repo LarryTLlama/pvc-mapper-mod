@@ -38,7 +38,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
 
 import net.minecraft.ChatFormatting;
 
@@ -127,87 +127,86 @@ public class ShopsScreen extends Screen {
                 Component.literal("Search by"), (btn, value) -> {
                     currentSearchMode = value;
                     LogUtils.debug(value);
-                    switch (value) {
-                        case "item":
-                            itemSearch.setHint(Component.literal("e.g PLAYTIME_CERTIFICATE"));
-                            break;
-                        case "username":
-                            itemSearch.setHint(Component.literal("e.g .LarryTLlama"));
-                            break;
-                        default:
-                            itemSearch.setHint(Component.literal("Search items or players"));
-                            break;
-                    }
-                } 
-            );
-        this.addRenderableWidget(searchMode);
-
-        SponsorUtils.getBannerAsync().thenAccept(banner -> {
-            SponsorUtils.bannerToTexture(banner.imgurl, (rl) -> {
-                this.sponsorBanner = rl;
-            });
-            sponsorHoverText = List.of(
-                    Component.literal(banner.title).withStyle(ChatFormatting.BOLD)
-                            .append(Component.literal(" (Click to view)").withStyle(ChatFormatting.GRAY)),
-                    Component.literal(banner.description));
-            sponsorURLString = banner.link;
-        });
-
-        this.setInitialFocus(itemSearch);
-        this.setFocused(itemSearch);
-    }
-
-    @Override
-    public boolean keyPressed(KeyEvent keyEvent) {
-        if (keyEvent.key() == GLFW.GLFW_KEY_ESCAPE) {
-            if(itemSearch.isFocused()) itemSearch.setFocused(false);
-            else CompatUtils.setScreen(null);
-        } else if(itemSearch.isFocused()) {
-            if(keyEvent.key() == GLFW.GLFW_KEY_TAB) {
-                if (filteredItems != null && filteredItems.length > 0 && filteredItems[0] != null) {
-                    itemSearch.setValue(filteredItems[0]);
-                }
-            } else if(keyEvent.key() == GLFW.GLFW_KEY_ENTER) {
-                if(currentSearchMode.equals("item")) this.openWithItem(this.itemSearch.getValue());
-                else if(currentSearchMode.equals("username")) this.openWithUsername(this.itemSearch.getValue());
-                itemSearch.setFocused(false);
-            }
-        }
-        return super.keyPressed(keyEvent);
-    }
-
-    ResIdentifier SEARCH_ICON = ResIdentifier.of("minecraft", "textures/gui/sprites/icon/search.png");
-
-
-    @Override
-    public void mouseMoved(double mouseX, double mouseY) {
-        if (sponsorBanner != null) {
-            if (mouseY > (this.height - 35) && mouseY < (this.height - 10) && mouseX > 10 && mouseX < 203) {
-                drawSponsorTooltip = true;
-            } else {
-                drawSponsorTooltip = false;
-            }
-        } else {
-            drawSponsorTooltip = false;
-        }
-    }
-
-    @Override
-    public boolean mouseClicked(MouseButtonEvent mbe, boolean bl) {
-        if (mbe.y() > (this.height - 28) && mbe.y() < (this.height - 3) && mbe.x() > 3 && mbe.x() < 196) {
-            Minecraft mc = Minecraft.getInstance();
-            CompatUtils.setScreen(mc, new ConfirmLinkScreen(confirmed -> {
-                if (confirmed) {
-                    Util.getPlatform().openUri(sponsorURLString);
-                }
-                CompatUtils.setScreen(mc, null);
-            }, sponsorURLString, true));
-        }
-        return super.mouseClicked(mbe, bl);
-    }
-
-    Map<String, ResIdentifier> tiles = new HashMap<>();
-    ResIdentifier blurredTile = ResIdentifier.of("pvcmappermod", "textures/gui/tileloading.png");
+                    switch (value) {
+                        case "item":
+                            itemSearch.setHint(Component.literal("e.g PLAYTIME_CERTIFICATE"));
+                            break;
+                        case "username":
+                            itemSearch.setHint(Component.literal("e.g .LarryTLlama"));
+                            break;
+                        default:
+                            itemSearch.setHint(Component.literal("Search items or players"));
+                            break;
+                    }
+                } 
+            );
+        this.addRenderableWidget(searchMode);
+
+        SponsorUtils.getBannerAsync().thenAccept(banner -> {
+            SponsorUtils.bannerToTexture(banner.imgurl, (rl) -> {
+                this.sponsorBanner = rl;
+            });
+            sponsorHoverText = List.of(
+                    Component.literal(banner.title).withStyle(ChatFormatting.BOLD)
+                            .append(Component.literal(" (Click to view)").withStyle(ChatFormatting.GRAY)),
+                    Component.literal(banner.description));
+            sponsorURLString = banner.link;
+        });
+
+        this.setInitialFocus(itemSearch);
+        this.setFocused(itemSearch);
+    }
+
+    @Override
+    public boolean keyPressed(KeyEvent keyEvent) {
+        if (keyEvent.key() == InputConstants.KEY_ESCAPE) {
+            if(itemSearch.isFocused()) itemSearch.setFocused(false);
+            else CompatUtils.setScreen(null);
+        } else if(itemSearch.isFocused()) {
+            if(keyEvent.key() == InputConstants.KEY_TAB) {
+                if (filteredItems != null && filteredItems.length > 0 && filteredItems[0] != null) {
+                    itemSearch.setValue(filteredItems[0]);
+                }
+            } else if(keyEvent.key() == InputConstants.KEY_RETURN) {
+                if(currentSearchMode.equals("item")) this.openWithItem(this.itemSearch.getValue());
+                else if(currentSearchMode.equals("username")) this.openWithUsername(this.itemSearch.getValue());
+                itemSearch.setFocused(false);
+            }
+        }
+        return super.keyPressed(keyEvent);
+    }
+
+    ResIdentifier SEARCH_ICON = ResIdentifier.of("minecraft", "textures/gui/sprites/icon/search.png");
+
+    @Override
+    public void mouseMoved(double mouseX, double mouseY) {
+        if (sponsorBanner != null) {
+            if (mouseY > (this.height - 35) && mouseY < (this.height - 10) && mouseX > 10 && mouseX < 203) {
+                drawSponsorTooltip = true;
+            } else {
+                drawSponsorTooltip = false;
+            }
+        } else {
+            drawSponsorTooltip = false;
+        }
+    }
+
+    @Override
+    public boolean mouseClicked(MouseButtonEvent mbe, boolean bl) {
+        if (mbe.y() > (this.height - 28) && mbe.y() < (this.height - 3) && mbe.x() > 3 && mbe.x() < 196) {
+            Minecraft mc = Minecraft.getInstance();
+            CompatUtils.setScreen(mc, new ConfirmLinkScreen(confirmed -> {
+                if (confirmed) {
+                    Util.getPlatform().openUri(sponsorURLString);
+                }
+                CompatUtils.setScreen(mc, null);
+            }, sponsorURLString, true));
+        }
+        return super.mouseClicked(mbe, bl);
+    }
+
+    Map<String, ResIdentifier> tiles = new HashMap<>();
+    ResIdentifier blurredTile = ResIdentifier.of("pvcmappermod", "textures/gui/tileloading.png");
     ResIdentifier villagerImg = ResIdentifier.of("pvcmappermod", "textures/gui/villager.png");
 
     // Trace meeeee
