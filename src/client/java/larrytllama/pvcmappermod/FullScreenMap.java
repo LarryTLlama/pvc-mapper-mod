@@ -61,7 +61,9 @@ public class FullScreenMap extends Screen {
     public FeatureTypes overlayFeature;
     public ResIdentifier overlayImage;
     public String overlayImageStatus;
-    public ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+    public ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor(
+        Thread.ofPlatform().daemon().name("pvc-mapper-fsm-zoom").factory()
+    );
     private boolean isMouseDown = false;
     public SettingsProvider sp;
     public Network[] allNetworks = new Network[0];
