@@ -77,7 +77,9 @@ public class PlayerFetchUtils {
 
     public void startUpdates() {
         isUpdating = true;
-        scheduler = Executors.newSingleThreadScheduledExecutor();
+        scheduler = Executors.newSingleThreadScheduledExecutor(
+            Thread.ofPlatform().daemon().name("pvc-mapper-player-fetch").factory()
+        );
         scheduler.scheduleAtFixedRate(
                 () -> {
                     // Prevent loading when not needed

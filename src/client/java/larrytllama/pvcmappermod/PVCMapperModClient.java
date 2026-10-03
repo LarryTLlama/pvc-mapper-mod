@@ -166,7 +166,10 @@ public class PVCMapperModClient implements ClientModInitializer {
         this.minimap = Minimap.attach(pfu, sp, dp);
 
         HttpClient http = HttpClient.newHttpClient();
-        ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+        // A daemon thread factory prevents background uploads from being force-killed by JVM when you exit the game
+        ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(
+            Thread.ofPlatform().daemon().name("pvc-mapper-rank-upload").factory()
+        );
         scheduler.scheduleAtFixedRate(() -> {
             if(sp.collectData) {
                 CompletableFuture.runAsync(() -> {
