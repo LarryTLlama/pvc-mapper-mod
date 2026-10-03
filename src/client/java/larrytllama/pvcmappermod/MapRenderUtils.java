@@ -133,15 +133,12 @@ public class MapRenderUtils {
         //?} else {
         /*GuiGraphicsExtractor*///?}
         g, int minX, int maxX, int y, int color) {
-        //? if <26.1 {
+        
         if (y <= 0 || y >= g.guiHeight()) return;
-        //?} else {
-        /*if (y <= 0) return;*/
-        //?}
+        
         minX = Math.max(minX, 0);
-        //? if <26.1 {
         maxX = Math.min(maxX, g.guiWidth() - 1);
-        //?}
+        
         if (minX <= maxX) {
             g.fill(minX, y, maxX + 1, y + 1, color);
         }

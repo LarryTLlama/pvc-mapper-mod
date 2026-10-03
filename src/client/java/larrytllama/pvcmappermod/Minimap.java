@@ -556,7 +556,7 @@ public class Minimap {
         }
         this.lastX = mc.player.getBlockX();
         this.lastZ = mc.player.getBlockZ();
-        if(sp.showNetworks) {
+        if(sp.showNetworks && !sp.hideMinimapNetworks) {
             for (int i = 0; i < transportNetwork.getSegments().size(); i++) {
                 TransportNetwork.Segment line = transportNetwork.getSegments().get(i);
                 MapRenderUtils.drawLine(context, (int)line.coords[0][0] + topLeftZ, (int)line.coords[0][1] + topLeftX, (int)line.coords[1][0] + topLeftZ, (int)line.coords[1][1] + topLeftX, line.colour);

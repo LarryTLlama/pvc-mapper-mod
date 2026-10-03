@@ -1,13 +1,15 @@
 pluginManagement {
     repositories {
-        maven("https://maven.fabricmc.net/")
         mavenCentral()
         gradlePluginPortal()
+        maven("https://maven.fabricmc.net/")
+        maven("https://maven.kikugie.dev/releases") { name = "KikuGie Releases" }
     }
 }
 
 plugins {
-    id("dev.kikugie.stonecutter") version "0.9.6"
+    id("dev.kikugie.stonecutter") version "0.9.8"
+    id("dev.kikugie.loom-back-compat") version "0.4.2"
 }
 
 // Read supported versions from root gradle.properties
