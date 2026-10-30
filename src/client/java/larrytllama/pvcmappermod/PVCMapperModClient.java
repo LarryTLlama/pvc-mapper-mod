@@ -27,6 +27,7 @@ import larrytllama.pvcmappermod.mixin.client.TabListMixin;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientChunkEvents;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 //? if <26.1 {
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
@@ -100,6 +101,9 @@ public class PVCMapperModClient implements ClientModInitializer {
     private static boolean seenMainMenu = false;
 
     private float inLevelTicks = 0;
+    private int terra2BatchTicks = 0;
+    private static final int TERRA2_BATCH_TICKS = 30 * 20; // 30s at 20tps
+    private static final int AREA_BORDER_CHECK_TICKS = 20; 
 
     public ShortArea[] shortAreas = new ShortArea[0];
 
@@ -217,7 +221,7 @@ public class PVCMapperModClient implements ClientModInitializer {
         this.dp = new DirectionsProvider(pfu, minimap);
         this.minimap = Minimap.attach(pfu, sp, dp);
 
-        HttpClient http = HttpClient.newHttpClient();
+        HttpClient http = NetworkUtils.HTTP_CLIENT;
         // A daemon thread factory prevents background uploads from being force-killed by JVM when you exit the game
         ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(
             Thread.ofPlatform().daemon().name("pvc-mapper-rank-upload").factory()
@@ -270,7 +274,8 @@ public class PVCMapperModClient implements ClientModInitializer {
         MINIMAP_ZOOM_OUT = CompatUtils.registerKey(MINIMAP_ZOOM_OUT);
         fsm = FullScreenMap.createScreen(Component.literal("PVC Mapper - Map View"), pfu, sp);
 
-        
+        ArrayList<Integer> insideIDs = new ArrayList<Integer>();
+
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             // Auto-upload nether portals
             if(sp.collectData == true && client.player != null && client.level != null && client.level.getBlockState(client.player.blockPosition()).is(Blocks.NETHER_PORTAL)) {
@@ -283,6 +288,7 @@ public class PVCMapperModClient implements ClientModInitializer {
             } else {
                 this.wasInPortal = false;
             }
+
             while (OPEN_MAP.consumeClick()) {
                 if(!sp.showInOtherPlaces && !pfu.isInPVC()) {
                     continue;
@@ -333,16 +339,23 @@ public class PVCMapperModClient implements ClientModInitializer {
                     NEXT_TICK_TASK = null;
                 }
             }
-        });
 
-
-        ArrayList<Integer> insideIDs = new ArrayList<Integer>();
-
-        ClientTickEvents.END_CLIENT_TICK.register((client) -> {
             if (client.level == null) return;
             if(!sp.showInOtherPlaces && !pfu.isInPVC()) {
                 return;
             }
+
+            // Batch and upload chunks every 30 seconds
+            if(!pfu.chunkBatch.isEmpty()) {
+                terra2BatchTicks++;
+                if(terra2BatchTicks >= TERRA2_BATCH_TICKS) {
+                    terra2BatchTicks = 0;
+                    pfu.uploadTerra2Batch();
+                }
+            } else {
+                terra2BatchTicks = 0;
+            }
+
             inLevelTicks++;
             if(inLevelTicks == 40) {
                 inLevelTicks = 0;
@@ -378,7 +391,7 @@ public class PVCMapperModClient implements ClientModInitializer {
                 }
                 minimap.isLoadingIn = false;
             } 
-            if(inLevelTicks % 20 == 0) {
+            if(inLevelTicks % AREA_BORDER_CHECK_TICKS == 0) {
                 // Update less! :)
                 if (Minecraft.getInstance().player == null || Minecraft.getInstance().level == null) return;
     
@@ -413,6 +426,12 @@ public class PVCMapperModClient implements ClientModInitializer {
             pfu.startUpdates(); // TODO: Renable when in PVC
         });
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
+            pfu.stopUpdates();
+        });
+
+        ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
+            scheduler.shutdownNow();
+            fsm.executor.shutdownNow();
             pfu.stopUpdates();
         });
 
