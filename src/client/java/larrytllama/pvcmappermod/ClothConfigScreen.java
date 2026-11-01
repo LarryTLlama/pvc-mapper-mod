@@ -10,6 +10,7 @@ import me.shedaniel.clothconfig2.gui.entries.StringListEntry;
 import me.shedaniel.clothconfig2.impl.builders.EnumSelectorBuilder;
 import me.shedaniel.clothconfig2.impl.builders.IntSliderBuilder;
 import java.net.URI;
+import java.util.Optional;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.ClickEvent;
@@ -67,6 +68,7 @@ public class ClothConfigScreen extends Screen {
             sp.checkForUpdates = this.checkForUpdates.getValue();
             sp.minimapScale = this.minimapScale.getValue() / 100.0;
             sp.collectData = this.collectData.getValue();
+            sp.t2TileUploads = this.t2TileUploads.getValue();
             sp.t2maptoken = this.t2maptoken.getValue();
             sp.debugMode = this.debugMode.getValue();
             sp.hideMinimapNetworks = !this.showNetworkLines.getValue();
@@ -89,7 +91,7 @@ public class ClothConfigScreen extends Screen {
             sp.saveSettings();
         })
         .setTitle(Component.literal("PVC Mapper Mod Settings"));
-        ConfigCategory minimapSettings = builder.getOrCreateCategory(Component.literal("Minimap Settings"));
+        ConfigCategory minimapSettings = builder.getOrCreateCategory(Component.literal("Minimap"));
 
         ConfigEntryBuilder entryBuilder = builder.entryBuilder();
         this.showMinimap = entryBuilder.startBooleanToggle(Component.literal("Show Minimap"), sp.miniMapEnabled)
@@ -119,7 +121,7 @@ public class ClothConfigScreen extends Screen {
             .build();
         minimapSettings.addEntry(this.minimapScale);
 
-        ConfigCategory alertSettings = builder.getOrCreateCategory(Component.literal("Alert Settings"));
+        ConfigCategory alertSettings = builder.getOrCreateCategory(Component.literal("Alerts"));
         this.showWelcomePopup = entryBuilder.startBooleanToggle(Component.literal("Show Welcome Popup"),  sp.showWelcomePopup)
             .setDefaultValue(true)
             .setTooltip(
@@ -145,7 +147,7 @@ public class ClothConfigScreen extends Screen {
             .build();
         alertSettings.addEntry(this.checkForUpdates);
         
-        ConfigCategory filterSettings = builder.getOrCreateCategory(Component.literal("Filters"));
+        ConfigCategory filterSettings = builder.getOrCreateCategory(Component.literal("Map Filters"));
         this.showPlaces = entryBuilder.startBooleanToggle(Component.literal("Show Places"), sp.showPlaces)
             .setDefaultValue(true)
             .setTooltip(Component.literal("Show places (banner icons) on minimap and map screen."))
@@ -175,7 +177,7 @@ public class ClothConfigScreen extends Screen {
             entryBuilder.startTextDescription(Component.literal("You can also change these settings in the map menu by clicking the filters button.")).build()
         );
 
-        ConfigCategory uploadSettings = builder.getOrCreateCategory(Component.literal("Upload Settings"));
+        ConfigCategory uploadSettings = builder.getOrCreateCategory(Component.literal("Data & Uploads"));
         this.collectData = entryBuilder.startBooleanToggle(Component.literal("Enable Mapper Uploads"), sp.collectData)
             .setDefaultValue(false)
             .setTooltip(
@@ -188,7 +190,7 @@ public class ClothConfigScreen extends Screen {
         uploadSettings.addEntry(
             entryBuilder.startTextDescription(
                 Component.literal("  ↳ What data is uploaded? ")
-                .append(Component.literal("See Data Notice").withStyle(s -> s
+                .append(Component.literal("See Data Notice ↗").withStyle(s -> s
                     .withColor(ChatFormatting.AQUA)
                     .withUnderlined(true)
                     .withClickEvent(new ClickEvent.OpenUrl(URI.create("https://pvc.coolwebsite.uk/help/data-uploading")))
@@ -198,26 +200,34 @@ public class ClothConfigScreen extends Screen {
         
         this.t2TileUploads = entryBuilder.startBooleanToggle(Component.literal("Enable Terra2 Tile Uploads"), sp.t2TileUploads)
             .setDefaultValue(false)
-            .setTooltip(
-                Component.literal("Upload Terra2 Tiles to the PVC Mapper as you move around!"),
-                Component.literal("(Potato PC players on a dodgy connection may wish to keep this off for performance)"),
-                Component.literal("A valid token (see below) is required.")
-            )
+            .setTooltipSupplier(enabled -> {
+                if (!enabled && this.t2maptoken != null && !this.t2maptoken.getValue().isBlank()) {
+                    return Optional.of(new Component[]{
+                        Component.literal("Uploads are currently paused (your token is saved).").withStyle(ChatFormatting.YELLOW),
+                        Component.literal("(Potato PC players on a dodgy connection may wish to keep this off for performance)")
+                    });
+                }
+                return Optional.of(new Component[]{
+                    Component.literal("Upload Terra2 Tiles to the PVC Mapper as you move around!"),
+                    Component.literal("(Potato PC players on a dodgy connection may wish to keep this off for performance)")
+                });
+            })
             .build();
         uploadSettings.addEntry(this.t2TileUploads);
 
-        this.t2maptoken = entryBuilder.startStrField(Component.literal("T2 Map Token"), sp.t2maptoken)
-            .setTooltip(
-                Component.literal("Add a token to enable Terra2 tile uploads."),
-                Component.literal("Leave blank to disable tile uploads")
-            )
+        this.t2maptoken = entryBuilder.startStrField(Component.literal("  ↳ Your Mapper Token"), sp.t2maptoken)
+            .setDefaultValue("")
+            .setTooltip(Component.literal("So PVC Mapper knows it's you!"))
+            .setErrorSupplier(val -> this.t2TileUploads.getValue() && val.isBlank()
+                ? Optional.of(Component.literal("A valid token (see below) is needed first!"))
+                : Optional.empty())
             .build();
         uploadSettings.addEntry(this.t2maptoken);
         
         uploadSettings.addEntry(
             entryBuilder.startTextDescription(
-                Component.literal("  ↳ Get your token from the editor! Sign in, click at the top right, then 'Tokens'")
-                    .append(Component.literal("Open Mapper Editor").withStyle(s -> s
+                Component.literal("    ↳ Get your token: Sign in to the Editor → click at the top right → 'Tokens' ")
+                    .append(Component.literal("Open Editor ↗").withStyle(s -> s
                         .withColor(ChatFormatting.AQUA)
                         .withUnderlined(true)
                         .withClickEvent(new ClickEvent.OpenUrl(URI.create("https://pvc.coolwebsite.uk/create/v2")))
@@ -225,7 +235,7 @@ public class ClothConfigScreen extends Screen {
             ).build()
         );
 
-        ConfigCategory miscSettings = builder.getOrCreateCategory(Component.literal("Miscellaneous Settings"));
+        ConfigCategory miscSettings = builder.getOrCreateCategory(Component.literal("Miscellaneous"));
         this.orwellMeter = entryBuilder.startEnumSelector(Component.literal("Orwell Mute Mode"), OrwellianMeter.class, sp.orwellMeter)
             .setDefaultValue(OrwellianMeter.ALL)
             .setTooltip(

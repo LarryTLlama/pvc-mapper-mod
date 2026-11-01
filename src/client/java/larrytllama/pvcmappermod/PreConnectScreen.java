@@ -50,7 +50,7 @@ public class PreConnectScreen extends Screen {
             styled("  • ", ChatFormatting.GRAY), "Press comma ", styled("[,]", ChatFormatting.GOLD), " to open the shops viewer!\n",
             styled("  (You can rebind these keys in the settings).\n", ChatFormatting.GRAY),
             styled("  • ", ChatFormatting.GRAY), "Use ", styled("/mapper help", ChatFormatting.AQUA), " to see the mod commands!\n\n",
-            "The mod also auto-uploads things like player ranks (taken from the Tab list), nether portal locations, and Terra2 map data (coming soon!). This stuff isn't available from the official PVC website, so is contributed by mod users like you!\n",
+            "The mod also auto-uploads things like player ranks (taken from the Tab list), nether portal locations, and Terra2 map data. This stuff isn't available from the official PVC website, so is contributed by mod users like you!\n",
             "To find out more, click 'See Data Notice'. Use this checkbox to enable or disable it:"
         );
         
