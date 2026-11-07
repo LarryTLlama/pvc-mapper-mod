@@ -704,7 +704,7 @@ public class FullScreenMap extends Screen {
                         GraphicsHelper.drawCenteredString(context, minecraft.font, overlayImageStatus, (((this.width / 2) - 10 - (this.width / 6)) / 2) + (this.width / 6), 121, 0xFFFFFFFF);
                     }
                 } catch(Exception e) {
-                    LogUtils.debug("[PVC Mapper Mod] Unable to write area details to screen renderererer.");
+                    LogUtils.debug("Unable to write area details to screen renderererer.");
                 }
             }
         } else {

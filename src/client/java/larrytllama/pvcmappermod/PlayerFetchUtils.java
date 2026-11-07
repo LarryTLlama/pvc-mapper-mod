@@ -68,8 +68,7 @@ public class PlayerFetchUtils {
                 .build();
             NetworkUtils.HTTP_CLIENT.sendAsync(request, java.net.http.HttpResponse.BodyHandlers.ofString());
         } catch(Exception e) {
-            System.out.println("Couldn't publish nether portal...");
-            System.out.println(e);
+            LogUtils.error("Couldn't publish nether portal...", e);
         }
     }
 
@@ -82,8 +81,7 @@ public class PlayerFetchUtils {
                 .build();
             NetworkUtils.HTTP_CLIENT.sendAsync(request, java.net.http.HttpResponse.BodyHandlers.ofString());
         } catch(Exception e) {
-            System.out.println("Couldn't publish admin shop...");
-            System.out.println(e);
+            LogUtils.error("Couldn't publish admin shop...", e);
         }
     }
 
@@ -93,7 +91,7 @@ public class PlayerFetchUtils {
     public void publishTerra2Chunk(ChunkData chunk, String newtoken) {
         token = newtoken;
         if(chunk == null) return;
-        System.out.println("Adding chunk to batch. Chunk at:" + String.format("%d, %d", chunk.chunkX, chunk.chunkZ));
+        LogUtils.debug("Adding chunk to batch. Chunk at: %d, %d", chunk.chunkX, chunk.chunkZ);
         chunkBatch.add(chunk);
     }
 
@@ -101,7 +99,7 @@ public class PlayerFetchUtils {
         if(chunkBatch.isEmpty() || token.trim().isEmpty()) return;
 
         try {
-            System.out.println("Sending T2 tile batch...");
+            LogUtils.debug("Sending T2 tile batch...");
             java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
                 .uri(new URI(NetworkUtils.BASE_URL + "/maps/api/upload/" + token.trim()))
                 .header("Content-Type", "application/json")
@@ -109,11 +107,14 @@ public class PlayerFetchUtils {
                 .build();
             chunkBatch.clear();
             NetworkUtils.HTTP_CLIENT.sendAsync(request, java.net.http.HttpResponse.BodyHandlers.ofString()).thenAccept((res) -> {
-                System.out.println("Tile request sent. Received status: " + res.statusCode());
+                if(res.statusCode() == 200) {
+                    LogUtils.debug("Tile request sent. Received status: %d", res.statusCode());
+                } else {
+                    LogUtils.warn("Tile request sent. Received status: %d", res.statusCode());
+                }
             });
         } catch(Exception e) {
-            System.out.println("Couldn't publish Terra2 tiles...");
-            System.out.println(e);
+            LogUtils.error("Couldn't publish Terra2 tiles...", e);
         }
     }
 

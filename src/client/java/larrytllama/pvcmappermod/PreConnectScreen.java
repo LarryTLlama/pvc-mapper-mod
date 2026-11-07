@@ -40,7 +40,7 @@ public class PreConnectScreen extends Screen {
             dataUploadsLink = new URI("https://pvc.coolwebsite.uk/help/data-uploading");
         } catch(Exception e) {
             dataUploadsLink = null;
-            System.out.println(e);
+            LogUtils.error("Tried to load the data notice link, but got:", e);
         }
 
         Component messageString = text(

@@ -165,7 +165,7 @@ public class PVCMapperModClient implements ClientModInitializer {
         PlayerFetchUtils pfu = new PlayerFetchUtils();
         pfu.fetchOrwellMuteCases().thenAccept((omc) -> {
             pfu.omc = omc;
-            System.out.println("Fetch orwell mute cases. Let the chaos begin!");
+            LogUtils.debug("Fetch orwell mute cases. Let the chaos begin!");
         });
         pfu.fetchShortAreasAsync().thenAccept(areas -> {
             this.shortAreas = areas;
@@ -262,7 +262,7 @@ public class PVCMapperModClient implements ClientModInitializer {
                     } catch(Exception e) {
                         // No bother, we'll just log to console and ignore!
                         // Who actually cares about HTTP error codes? Nothing wrong with ignoring them! *foreshadowing*
-                        LogUtils.error("[PVC Mapper Mod] Oh naur! Uploading data to mapper failed. Here's the error:", e);
+                        LogUtils.error("Oh naur! Uploading data to mapper failed. Here's the error:", e);
                     }
                 });
             }
@@ -279,9 +279,9 @@ public class PVCMapperModClient implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             // Auto-upload nether portals
             if(sp.collectData == true && client.player != null && client.level != null && client.level.getBlockState(client.player.blockPosition()).is(Blocks.NETHER_PORTAL)) {
-                System.out.println("Found in portal!");
+                LogUtils.debug("Found in portal!");
                 if(!this.wasInPortal) {
-                    System.out.println("Uploading portal!");
+                    LogUtils.debug("Uploading portal!");
                     this.wasInPortal = true;
                     pfu.publishNetherPortal(client.player.getStringUUID(), client.player.getBlockX(), client.player.getBlockY(), client.player.getBlockZ());
                 }

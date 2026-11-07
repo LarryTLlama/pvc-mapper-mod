@@ -42,7 +42,7 @@ public class MapperCmdHandler {
     public MapperCmdHandler(PlayerFetchUtils pfu, PVCMapperModClient modclient) {
         this.pfu = pfu;
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
-            LogUtils.debug("[PVC Mapper Mod] ClientCommandRegistrationCallback.EVENT triggered");
+            LogUtils.debug("ClientCommandRegistrationCallback.EVENT triggered");
 
             dispatcher.register(
                 ClientCommandManager.literal("search")
@@ -119,7 +119,7 @@ public class MapperCmdHandler {
             dispatcher.register(
                 ClientCommandManager.literal("map")
                 .executes((context) -> {
-                    LogUtils.debug("[PVC Mapper Mod] /map command executes called");
+                    LogUtils.debug("/map command executes called");
                     PVCMapperModClient.setScreenOnNextTick(modclient.fsm);
                     return 1;
                 })
@@ -144,14 +144,14 @@ public class MapperCmdHandler {
             dispatcher.register(
                 ClientCommandManager.literal("shops")
                 .executes((context) -> {
-                    LogUtils.debug("[PVC Mapper Mod] /shops command executes called");
+                    LogUtils.debug("/shops command executes called");
                     PVCMapperModClient.setScreenOnNextTick(modclient.shopsScreen);
                     return 1;
                 })
                 .then(ClientCommandManager.argument("item", StringArgumentType.greedyString()).suggests(ShopsHandler.ITEM_SUGGESTIONS)
                     .executes((context) -> {
                         String item = StringArgumentType.getString(context, "item");
-                        LogUtils.debug("[PVC Mapper Mod] /shops command executes called with item: " + item);
+                        LogUtils.debug("/shops command executes called with item: " + item);
                         PVCMapperModClient.setScreenOnNextTick(modclient.shopsScreen, () -> {
                             CompletableFuture.runAsync(() -> {
                                 modclient.shopsScreen.openWithItem(item);
@@ -273,7 +273,7 @@ public class MapperCmdHandler {
                         });
                         return 1;
                     } catch(Exception e) {
-                        System.out.println(e);
+                        LogUtils.error("Couldn't check player AFK status", e);
                         Minecraft.getInstance().execute(() -> {
                             context.getSource().sendFeedback(Component.literal("An unknown exception occurred when checking for player AFK-ness"));
                         });
@@ -297,7 +297,7 @@ public class MapperCmdHandler {
                     }
                     if(dim == null || dim.isEmpty()) dim = modclient.minimap.isInTerra2 ? "minecraft_terra2" : "minecraft_" + CompatUtils.getIdentifier(Minecraft.getInstance().level.dimension()).getPath();
                     // I validate x/z in the pfu
-                    System.out.println("Finding nearest nether portal...");
+                    LogUtils.debug("Finding nearest nether portal...");
                     pfu.fetchNearestNetherPortal(
                         x, 
                         z, 
@@ -326,8 +326,7 @@ public class MapperCmdHandler {
                     Minecraft.getInstance().execute(() -> {
                         context.getSource().sendFeedback(Component.literal("An unknown exception occurred when checking for the nearest portal\nAre you currently located on the moon?").withStyle(ChatFormatting.RED));
                     });
-                    System.out.println(e);
-                    e.printStackTrace();;
+                    LogUtils.error("Couldn't find nearest portal", e);
                     return 1;
                 }
             };

@@ -236,7 +236,7 @@ public class TextureUtils {
      * Handles Cloudflare "Soft Rate Limits" by applying a backoff and serving a placeholder.
      */
     private static void handleSoftRateLimit(String urlString, String reason, Consumer<ResIdentifier> callback) {
-        System.err.println("[TextureUtils] Soft Rate Limit Triggered (" + reason + "): " + urlString);
+        LogUtils.warn("[TextureUtils] Soft Rate Limit Triggered (" + reason + "): " + urlString);
         // Back off for 20 seconds for this specific URL
         failedFetches.put(urlString, System.currentTimeMillis() + 20000);
         Minecraft.getInstance().execute(() -> callback.accept(blurredTile));
