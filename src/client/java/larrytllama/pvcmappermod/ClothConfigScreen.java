@@ -5,12 +5,13 @@ import me.shedaniel.clothconfig2.api.ConfigEntryBuilder;
 import me.shedaniel.clothconfig2.gui.entries.BooleanListEntry;
 import me.shedaniel.clothconfig2.gui.entries.EnumListEntry;
 import me.shedaniel.clothconfig2.gui.entries.IntegerSliderEntry;
-import me.shedaniel.clothconfig2.gui.entries.LongSliderEntry;
 import me.shedaniel.clothconfig2.gui.entries.StringListEntry;
 import me.shedaniel.clothconfig2.impl.builders.EnumSelectorBuilder;
 import me.shedaniel.clothconfig2.impl.builders.IntSliderBuilder;
 import java.net.URI;
+import java.util.Optional;
 import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
@@ -40,8 +41,9 @@ public class ClothConfigScreen extends Screen {
     private BooleanListEntry showNetworkLines;
     private StringListEntry mapTileSource;
     private IntegerSliderEntry miniMapZoom;
-    private LongSliderEntry minimapScale;
+    private IntegerSliderEntry minimapSize;
     private EnumListEntry<MiniMapPositions> miniMapPos;
+    private EnumListEntry<MinimapBackground> minimapBackground;
     private EnumListEntry<BigMapPos> bigMapPos;
     private EnumListEntry<OrwellianMeter> orwellMeter;
     private BooleanListEntry showWelcomePopup;
@@ -60,13 +62,17 @@ public class ClothConfigScreen extends Screen {
         .setSavingRunnable(() -> {
             sp.miniMapEnabled = this.showMinimap.getValue();
             sp.miniMapPos = this.miniMapPos.getValue();
+            sp.minimapBackground = this.minimapBackground.getValue();
             sp.mapTileSource = this.mapTileSource.getValue();
             sp.miniMapZoom = this.miniMapZoom.getValue();
             sp.useDarkTiles = this.useDarkTiles.getValue();
             sp.bigMapPos = this.bigMapPos.getValue();
             sp.checkForUpdates = this.checkForUpdates.getValue();
-            sp.minimapScale = this.minimapScale.getValue() / 100.0;
+            int step = this.minimapSize.getValue();
+            sp.minimapSizePercent = Minimap.stepToPercent(step);
+            sp.minimapScale = sp.minimapSizePercent == 0 ? 1.0 : sp.minimapSizePercent / 100.0;
             sp.collectData = this.collectData.getValue();
+            sp.t2TileUploads = this.t2TileUploads.getValue();
             sp.t2maptoken = this.t2maptoken.getValue();
             sp.debugMode = this.debugMode.getValue();
             sp.hideMinimapNetworks = !this.showNetworkLines.getValue();
@@ -89,7 +95,7 @@ public class ClothConfigScreen extends Screen {
             sp.saveSettings();
         })
         .setTitle(Component.literal("PVC Mapper Mod Settings"));
-        ConfigCategory minimapSettings = builder.getOrCreateCategory(Component.literal("Minimap Settings"));
+        ConfigCategory minimapSettings = builder.getOrCreateCategory(Component.literal("Minimap"));
 
         ConfigEntryBuilder entryBuilder = builder.entryBuilder();
         this.showMinimap = entryBuilder.startBooleanToggle(Component.literal("Show Minimap"), sp.miniMapEnabled)
@@ -105,21 +111,41 @@ public class ClothConfigScreen extends Screen {
         minimapSettings.addEntry(this.showNetworkLines);
         this.miniMapPos = entryBuilder.startEnumSelector(Component.literal("Minimap Position"), MiniMapPositions.class, sp.miniMapPos)
             .setDefaultValue(MiniMapPositions.TOP_RIGHT) 
+            .setEnumNameProvider(pos -> pos == MiniMapPositions.TOP_LEFT
+                ? Component.literal("Top left")
+                : Component.literal("Top right"))
             .setTooltip(Component.literal("Choose where the minimap goes!"))
             .build();
         minimapSettings.addEntry(this.miniMapPos);
+        this.minimapBackground = entryBuilder.startEnumSelector(Component.literal("Minimap Background"), MinimapBackground.class, sp.minimapBackground)
+            .setDefaultValue(MinimapBackground.MENU_BG)
+            .setEnumNameProvider(bg -> bg == MinimapBackground.MAP_BG
+                ? Component.literal("Parchment Map")
+                : Component.literal("Darken Background"))
+            .setTooltip(Component.literal("Choose between menu background (black translucent) or map parchment background."))
+            .build();
+        minimapSettings.addEntry(this.minimapBackground);
         this.miniMapZoom = entryBuilder.startIntSlider(Component.literal("Minimap Default Zoom"), sp.miniMapZoom, 1, 15)
             .setDefaultValue(8) 
             .setTooltip(Component.literal("Set the default zoom level of the minimap (when the server loads)."), Component.literal("8 is the most zoomed in (default)."), Component.literal("1 is the most zoomed out."))
             .build();
         minimapSettings.addEntry(this.miniMapZoom);
-        this.minimapScale = entryBuilder.startLongSlider(Component.literal("Minimap Scale"), (long) (sp.minimapScale * 100), (long) (1), (long) (200))
-            .setDefaultValue(100) 
-            .setTooltip(Component.literal("Set the size of the minimap"), Component.literal("1% (the min) almost hides the map."), Component.literal("200% (the max) is 2x the original scale."), Component.literal("Note: Minimap mouse hovering is disabled when this isn't set to 100"))
-            .build();
-        minimapSettings.addEntry(this.minimapScale);
+        int screenHeight = Minecraft.getInstance().getWindow().getGuiScaledHeight();
+        int maxStep = Minimap.getMaxSliderStep(screenHeight);
+        int currentStep = Minimap.percentToStep(sp.minimapSizePercent, maxStep);
 
-        ConfigCategory alertSettings = builder.getOrCreateCategory(Component.literal("Alert Settings"));
+        this.minimapSize = entryBuilder.startIntSlider(Component.literal("Minimap Size"), currentStep, 0, maxStep)
+            .setDefaultValue(0)
+            .setTextGetter(step -> Component.literal(Minimap.getSliderLabel(step, screenHeight)))
+            .setTooltip(
+                Component.literal("Set the viewport size of the minimap relative to 80 in-game pixels."),
+                Component.literal("Auto-adjusts to your screen resolution and GUI scale."),
+                Component.literal("Larger sizes reveal more of the surrounding map.")
+            )
+            .build();
+        minimapSettings.addEntry(this.minimapSize);
+
+        ConfigCategory alertSettings = builder.getOrCreateCategory(Component.literal("Alerts"));
         this.showWelcomePopup = entryBuilder.startBooleanToggle(Component.literal("Show Welcome Popup"),  sp.showWelcomePopup)
             .setDefaultValue(true)
             .setTooltip(
@@ -145,7 +171,7 @@ public class ClothConfigScreen extends Screen {
             .build();
         alertSettings.addEntry(this.checkForUpdates);
         
-        ConfigCategory filterSettings = builder.getOrCreateCategory(Component.literal("Filters"));
+        ConfigCategory filterSettings = builder.getOrCreateCategory(Component.literal("Map Filters"));
         this.showPlaces = entryBuilder.startBooleanToggle(Component.literal("Show Places"), sp.showPlaces)
             .setDefaultValue(true)
             .setTooltip(Component.literal("Show places (banner icons) on minimap and map screen."))
@@ -175,7 +201,7 @@ public class ClothConfigScreen extends Screen {
             entryBuilder.startTextDescription(Component.literal("You can also change these settings in the map menu by clicking the filters button.")).build()
         );
 
-        ConfigCategory uploadSettings = builder.getOrCreateCategory(Component.literal("Upload Settings"));
+        ConfigCategory uploadSettings = builder.getOrCreateCategory(Component.literal("Data & Uploads"));
         this.collectData = entryBuilder.startBooleanToggle(Component.literal("Enable Mapper Uploads"), sp.collectData)
             .setDefaultValue(false)
             .setTooltip(
@@ -188,7 +214,7 @@ public class ClothConfigScreen extends Screen {
         uploadSettings.addEntry(
             entryBuilder.startTextDescription(
                 Component.literal("  ↳ What data is uploaded? ")
-                .append(Component.literal("See Data Notice").withStyle(s -> s
+                .append(Component.literal("See Data Notice ↗").withStyle(s -> s
                     .withColor(ChatFormatting.AQUA)
                     .withUnderlined(true)
                     .withClickEvent(new ClickEvent.OpenUrl(URI.create("https://pvc.coolwebsite.uk/help/data-uploading")))
@@ -198,26 +224,34 @@ public class ClothConfigScreen extends Screen {
         
         this.t2TileUploads = entryBuilder.startBooleanToggle(Component.literal("Enable Terra2 Tile Uploads"), sp.t2TileUploads)
             .setDefaultValue(false)
-            .setTooltip(
-                Component.literal("Upload Terra2 Tiles to the PVC Mapper as you move around!"),
-                Component.literal("(Potato PC players on a dodgy connection may wish to keep this off for performance)"),
-                Component.literal("A valid token (see below) is required.")
-            )
+            .setTooltipSupplier(enabled -> {
+                if (!enabled && this.t2maptoken != null && !this.t2maptoken.getValue().isBlank()) {
+                    return Optional.of(new Component[]{
+                        Component.literal("Uploads are currently paused (your token is saved).").withStyle(ChatFormatting.YELLOW),
+                        Component.literal("(Potato PC players on a dodgy connection may wish to keep this off for performance)")
+                    });
+                }
+                return Optional.of(new Component[]{
+                    Component.literal("Upload Terra2 Tiles to the PVC Mapper as you move around!"),
+                    Component.literal("(Potato PC players on a dodgy connection may wish to keep this off for performance)")
+                });
+            })
             .build();
         uploadSettings.addEntry(this.t2TileUploads);
 
-        this.t2maptoken = entryBuilder.startStrField(Component.literal("T2 Map Token"), sp.t2maptoken)
-            .setTooltip(
-                Component.literal("Add a token to enable Terra2 tile uploads."),
-                Component.literal("Leave blank to disable tile uploads")
-            )
+        this.t2maptoken = entryBuilder.startStrField(Component.literal("  ↳ Your Mapper Token"), sp.t2maptoken)
+            .setDefaultValue("")
+            .setTooltip(Component.literal("So PVC Mapper knows it's you!"))
+            .setErrorSupplier(val -> this.t2TileUploads.getValue() && val.isBlank()
+                ? Optional.of(Component.literal("A valid token (see below) is needed first!"))
+                : Optional.empty())
             .build();
         uploadSettings.addEntry(this.t2maptoken);
         
         uploadSettings.addEntry(
             entryBuilder.startTextDescription(
-                Component.literal("  ↳ Get your token from the editor! Sign in, click at the top right, then 'Tokens'")
-                    .append(Component.literal("Open Mapper Editor").withStyle(s -> s
+                Component.literal("    ↳ Get your token: Sign in to the Editor → click at the top right → 'Tokens' ")
+                    .append(Component.literal("Open Editor ↗").withStyle(s -> s
                         .withColor(ChatFormatting.AQUA)
                         .withUnderlined(true)
                         .withClickEvent(new ClickEvent.OpenUrl(URI.create("https://pvc.coolwebsite.uk/create/v2")))
@@ -225,7 +259,7 @@ public class ClothConfigScreen extends Screen {
             ).build()
         );
 
-        ConfigCategory miscSettings = builder.getOrCreateCategory(Component.literal("Miscellaneous Settings"));
+        ConfigCategory miscSettings = builder.getOrCreateCategory(Component.literal("Miscellaneous"));
         this.orwellMeter = entryBuilder.startEnumSelector(Component.literal("Orwell Mute Mode"), OrwellianMeter.class, sp.orwellMeter)
             .setDefaultValue(OrwellianMeter.ALL)
             .setTooltip(
@@ -249,7 +283,10 @@ public class ClothConfigScreen extends Screen {
         miscSettings.addEntry(this.useDarkTiles);
         this.bigMapPos = entryBuilder.startEnumSelector(Component.literal("Big Map Position"), BigMapPos.class, sp.bigMapPos)
             .setDefaultValue(BigMapPos.CENTRE_ON_PLAYER) 
-            .setTooltip(Component.literal("Choose where the big map opens to!"), Component.literal("CENTRE_ON_PLAYER = Open to you"), Component.literal("CENTRE_ON_SPAWN = Open to spawn"), Component.literal("Note: The map will re-open to your last dragged location."))
+            .setEnumNameProvider(pos -> pos == BigMapPos.CENTRE_ON_PLAYER
+                ? Component.literal("Open to you")
+                : Component.literal("Open to spawn"))
+            .setTooltip(Component.literal("Choose where the big map opens to!"), Component.literal("Note: The map will re-open to your last dragged location."))
             .build();
         miscSettings.addEntry(this.bigMapPos);
         

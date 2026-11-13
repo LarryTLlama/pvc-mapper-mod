@@ -34,7 +34,11 @@ public class SettingsProvider {
 
     public boolean checkForUpdates = true;
 
+    public int minimapSizePercent = 0;
+
     public double minimapScale = 1;
+
+    public MinimapBackground minimapBackground = MinimapBackground.MENU_BG;
 
     public BigMapPos bigMapPos = BigMapPos.CENTRE_ON_PLAYER;
 
@@ -75,7 +79,15 @@ public class SettingsProvider {
             try {
                 LogUtils.info("Loading config from: " + path.toString());
                 SettingsJSON settingsFromFile = gson.fromJson(Files.readString(path), SettingsJSON.class);
+                // converts old minimapScale to closest 25% step
+                if(settingsFromFile.minimapSizePercent != 0) {
+                    minimapSizePercent = settingsFromFile.minimapSizePercent;
+                } else if(settingsFromFile.minimapScale != 0.0 && settingsFromFile.minimapScale != 1.0) {
+                    int legacyPct = (int) Math.round(settingsFromFile.minimapScale * 100.0);
+                    minimapSizePercent = Math.max(50, ((legacyPct + 12) / 25) * 25);
+                }
                 if(settingsFromFile.minimapScale != 0.0) minimapScale = settingsFromFile.minimapScale;
+                if(settingsFromFile.minimapBackground != null) minimapBackground = settingsFromFile.minimapBackground;
                 if(settingsFromFile.miniMapZoom != 0) miniMapZoom = settingsFromFile.miniMapZoom;
                 if(settingsFromFile.miniMapPos != null) miniMapPos = settingsFromFile.miniMapPos;
                 miniMapEnabled = settingsFromFile.miniMapEnabled;
@@ -123,7 +135,9 @@ public class SettingsProvider {
         SettingsJSON settingsToSet = new SettingsJSON();
         settingsToSet.mapTileSource = mapTileSource;
         settingsToSet.miniMapEnabled = miniMapEnabled;
-        settingsToSet.minimapScale = minimapScale;
+        settingsToSet.minimapSizePercent = minimapSizePercent;
+        settingsToSet.minimapScale = minimapSizePercent == 0 ? 1.0 : minimapSizePercent / 100.0;
+        settingsToSet.minimapBackground = minimapBackground;
         settingsToSet.miniMapPos = miniMapPos;
         settingsToSet.miniMapZoom = miniMapZoom;
         settingsToSet.useDarkTiles = useDarkTiles;
@@ -161,7 +175,9 @@ public class SettingsProvider {
 
 class SettingsJSON {
     int miniMapZoom = 8;
+    int minimapSizePercent = 0;
     double minimapScale = 1;
+    MinimapBackground minimapBackground = MinimapBackground.MENU_BG;
     MiniMapPositions miniMapPos = MiniMapPositions.TOP_RIGHT;
     boolean miniMapEnabled = true;
     String mapTileSource = NetworkUtils.BASE_URL + "/maps/";
@@ -184,6 +200,11 @@ class SettingsJSON {
     boolean showClaims = false;
     boolean shownDataNotice = false;
 }
+
+enum MinimapBackground {
+    MENU_BG,
+    MAP_BG
+};
 
 enum MiniMapPositions {
     TOP_LEFT,

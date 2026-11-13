@@ -394,6 +394,10 @@ public class PVCMapperModClient implements ClientModInitializer {
             if(inLevelTicks % AREA_BORDER_CHECK_TICKS == 0) {
                 // Update less! :)
                 if (Minecraft.getInstance().player == null || Minecraft.getInstance().level == null) return;
+                if (this.minimap.isInQueue || this.minimap.isLoadingIn || "minecraft_unknown_world".equals(minimap.getDimensionNID())) {
+                    insideIDs.clear();
+                    return;
+                }
     
                 int x = Minecraft.getInstance().player.getBlockX();
                 int z = Minecraft.getInstance().player.getBlockZ();
@@ -423,9 +427,11 @@ public class PVCMapperModClient implements ClientModInitializer {
             minimap.isInQueue = false;
             minimap.isInTerra2 = false;
             minimap.isLoadingIn = true;
+            insideIDs.clear();
             pfu.startUpdates(); // TODO: Renable when in PVC
         });
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
+            insideIDs.clear();
             pfu.stopUpdates();
         });
 
