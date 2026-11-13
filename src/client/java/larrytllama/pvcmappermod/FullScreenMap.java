@@ -1,40 +1,26 @@
 package larrytllama.pvcmappermod;
 
 import larrytllama.pvcmappermod.utils.*;
-import me.shedaniel.math.Color;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
 import java.net.URI;
-import net.minecraft.server.players.ProfileResolver;
 import net.minecraft.util.FormattedCharSequence;
-import net.minecraft.world.entity.player.PlayerSkin;
-import net.minecraft.world.item.component.ResolvableProfile;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.awt.Toolkit;
-import java.awt.datatransfer.StringSelection;
-import java.awt.geom.Line2D;
-import java.awt.geom.Rectangle2D;
 import java.time.Instant;
 
 import com.mojang.blaze3d.platform.InputConstants;
 
-import com.mojang.authlib.GameProfile;
 import net.minecraft.ChatFormatting;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Font;
 //? if <26.1 {
 import net.minecraft.client.gui.GuiGraphics;
 //?} else {
@@ -94,17 +80,41 @@ public class FullScreenMap extends Screen {
         );
     }
 
-    public void navToCoords(int x, int z) {
+    public void navToCoords(double worldX, double worldZ) {
+        navToCoords(worldX, worldZ, false);
+    }
+
+    public void navToCoords(double worldX, double worldZ, boolean animate) {
         int tilesize = 1 << (17 - zoomlevel);
         double scale = (double) minimapTileSize / tilesize;
-        this.x = (int)(x - ((this.width/2)/scale));
-        this.z = (int)(z - (((this.height - bottomMapOffset)/2)/scale));
-        onMouseMove(this.x, this.z);
+        double targetX = worldX - ((this.width / 2.0) / scale);
+        double targetZ = worldZ - (((this.height - bottomMapOffset) / 2.0) / scale);
+
+        if (animate && (Math.abs(targetX - x) > 1.0 || Math.abs(targetZ - z) > 1.0)) {
+            // they say 400-500ms is a good number for this kind of thing
+            cameraPan = new CameraPan(x, z, targetX, targetZ, 450);
+        } else {
+            stopCameraPan();
+            x = targetX;
+            z = targetZ;
+            onMouseMove(x, z);
+            resetFeatures();
+            resetClaims();
+        }
+    }
+
+    private void navToPlayer(boolean animate) {
+        if (minecraft.player == null) return;
+        navToCoords(minecraft.player.getX(), minecraft.player.getZ(), animate);
     }
 
     @Override
     public boolean keyPressed(KeyEvent keyEvent) {
         if (keyEvent.key() == InputConstants.KEY_ESCAPE) {
+            if (renderContextMenu) {
+                renderContextMenu = false;
+                return true;
+            }
             if (overlayOpen)
                 overlayOpen = false;
             else
@@ -122,17 +132,73 @@ public class FullScreenMap extends Screen {
     public int maxZoomLevel = 15;
     public int minZoomLevel = 1;
 
+    // leave map x/z as decimals until we actually need whole block coords
     public double x = 0;
     public double z = 0;
+
+    // Smooth camera pan animation state
+    private CameraPan cameraPan = null;
+
+    private void stopCameraPan() {
+        if (cameraPan != null) {
+            cameraPan.cancel();
+            cameraPan = null;
+        }
+    }
+
+    private static class CameraPan {
+        private final double startX;
+        private final double startZ;
+        private final double targetX;
+        private final double targetZ;
+        private final long startTime;
+        private final long durationMs;
+        private boolean active = true;
+
+        CameraPan(double startX, double startZ, double targetX, double targetZ, long durationMs) {
+            this.startX = startX;
+            this.startZ = startZ;
+            this.targetX = targetX;
+            this.targetZ = targetZ;
+            this.durationMs = durationMs;
+            this.startTime = System.currentTimeMillis();
+        }
+
+        void cancel() {
+            this.active = false;
+        }
+
+        // Google Mapsy cubic ease-in-out curve
+        double getProgress() {
+            if (!active) return 1.0;
+            long elapsed = System.currentTimeMillis() - startTime;
+            if (elapsed >= durationMs) return 1.0;
+            double t = (double) elapsed / durationMs;
+            return t < 0.5 ? 4.0 * t * t * t : 1.0 - Math.pow(-2.0 * t + 2.0, 3) / 2.0;
+        }
+
+        double getX() {
+            return startX + (targetX - startX) * getProgress();
+        }
+
+        double getZ() {
+            return startZ + (targetZ - startZ) * getProgress();
+        }
+
+        boolean isFinished() {
+            return !active || (System.currentTimeMillis() - startTime >= durationMs);
+        }
+
+        double getTargetX() {
+            return targetX;
+        }
+
+        double getTargetZ() {
+            return targetZ;
+        }
+    }
     
     public int minimapTileSize = 120;
-
-    Map<String, ResIdentifier> tiles = new HashMap<>();
-
-    public void resetTiles() {
-        this.tiles = new HashMap<>();
-    }
-    ResIdentifier blurredTile = ResIdentifier.of("pvcmappermod", "textures/gui/tileloading.png");
 
     private boolean drawSponsorTooltip = false;
 
@@ -173,15 +239,16 @@ public class FullScreenMap extends Screen {
     }
     public ArrayList<ClaimMarkers> shownClaims = new ArrayList<ClaimMarkers>();
     public void resetClaims() {
+        shownClaims = new ArrayList<ClaimMarkers>();
+        // skip claims when zoomed out too far
+        if (!sp.showClaims || zoomlevel < 8) {
+            return;
+        }
         int tilesize = 1 << (17 - zoomlevel);
         double scale = (double) minimapTileSize / tilesize;
-        if (sp.showClaims) {
-            if (zoomlevel < 8) return;
-            shownClaims = pfu.getClaimsInBounds(currentDimension, (int)x, (int) (x + (this.width / scale)), (int)z,
-                    (int) (z + ((this.height - bottomMapOffset) / scale)));
-        } else {
-            shownClaims = new ArrayList<ClaimMarkers>();
-        }
+        // use floor instead of (int) so negative coords don't round the wrong way
+        shownClaims = pfu.getClaimsInBounds(currentDimension, (int) Math.floor(x), (int) Math.floor(x + (this.width / scale)), (int) Math.floor(z),
+                (int) Math.floor(z + ((this.height - bottomMapOffset) / scale)));
     }
 
     public FeatureFetch[] shownFeatures = new FeatureFetch[0];
@@ -192,10 +259,11 @@ public class FullScreenMap extends Screen {
         double scale = (double) minimapTileSize / tilesize;
         pfu.fetchFeaturesAsync(
                 currentDimension,
-                (int)x,
-                (int) (x + (this.width / scale)),
-                (int)z,
-                (int) (z + ((this.height - bottomMapOffset) / scale)))
+                // floor to int so negative bounds stay accurate
+                (int) Math.floor(x),
+                (int) Math.floor(x + (this.width / scale)),
+                (int) Math.floor(z),
+                (int) Math.floor(z + ((this.height - bottomMapOffset) / scale)))
             .thenAccept(features -> {
                 // Perform bounds calculation on the local 'features' array first to prevent
                 // concurrency crashes where the main thread reads half-updated arrays.
@@ -222,6 +290,9 @@ public class FullScreenMap extends Screen {
 
     @Override
     public boolean mouseDragged(MouseButtonEvent mouseButtonEvent, double d, double e) {
+        stopCameraPan();
+        isMouseDown = true;
+        clearHoverState();
         int tilesize = 1 << (17 - zoomlevel);
         double scale = (double) minimapTileSize / tilesize;
         x -= d / scale;
@@ -246,17 +317,19 @@ public class FullScreenMap extends Screen {
         "Open on Web",
         "Centre Map Here"
     ));
+    String[] contextMenuValues = new String[contextMenuItems.size()];
     int bestContextMenuWidth = 0;
 
     public String getOppositeDimension(String dimension) {
         switch (dimension) {
             case "minecraft_overworld":
+            case "minecraft_terra2":
+                // Terra2 doesn't have its own nether map, so link it to Nether coords at 1:8
                 return "minecraft_the_nether";
             case "minecraft_the_nether":
-            case "minecraft_terra2":
                 return "minecraft_overworld";
             default:
-                return "minecraft_unknown";
+                return null;
         }
     }
 
@@ -266,50 +339,10 @@ public class FullScreenMap extends Screen {
         if(hasMovedX != x || hasMovedZ != z) {
             resetClaims();
             resetFeatures();
-        } else {
+        } else if (mbe.button() == InputConstants.MOUSE_BUTTON_LEFT) {
 
             int tilesize = 1 << (17 - zoomlevel);
             double scale = (double) minimapTileSize / tilesize;
-
-            // Note to self: mbe.isRight() is false no matter what
-            // Why is it like this!?
-            if(mbe.button() == 1 && mbe.y() < this.height-bottomMapOffset) {
-                bestContextMenuWidth = 0;
-                contextMenuX = mbe.x();
-                contextMenuY = mbe.y();
-                contextMenuWorldX = (int) ((contextMenuX / scale) + x);
-                contextMenuWorldZ = (int) ((contextMenuY / scale) + z);
-                contextMenuItems.set(0, String.format("%d, %d", contextMenuWorldX, contextMenuWorldZ));
-                contextMenuItems.set(1, String.format("%d, %d in %s", (int) Math.floor(contextMenuWorldX/8), (int) Math.floor(contextMenuWorldZ/8), pfu.prettyDimensionName(getOppositeDimension(currentDimension))));
-                contextMenuItems.set(2, String.format("%d, %d in %s", contextMenuWorldX, contextMenuWorldZ, pfu.prettyDimensionName(currentDimension)));
-                for (int i = 0; i < contextMenuItems.size(); i++) {
-                    bestContextMenuWidth = Math.max(bestContextMenuWidth, font.width(contextMenuItems.get(i))) + 2;
-                }
-                renderContextMenu = true;
-                return super.mouseReleased(mbe);
-            } else if(renderContextMenu && mbe.button() == 0) {
-                if(mbe.x() > contextMenuX && mbe.x() < contextMenuX + bestContextMenuWidth) {
-                    for (int i = 0; i < contextMenuItems.size(); i++) {
-                        if(mbe.y() > contextMenuY + (i * font.lineHeight) && mbe.y() < contextMenuY + ((i+1) * font.lineHeight)) {
-                            // Perform click action
-                            if(i<3) {
-                                Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(contextMenuItems.get(i)), null);
-                            } else if(i==3) { 
-                                Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(
-                                    String.format("%s?x=%d&z=%d&dimension=%s", NetworkUtils.BASE_URL, contextMenuWorldX, contextMenuWorldZ, currentDimension)
-                                ), null);
-                            } else if(i==4) ConfirmLinkScreen.confirmLinkNow(null, URI.create(String.format("%s?x=%d&z=%d&dimension=%s", NetworkUtils.BASE_URL, contextMenuWorldX, contextMenuWorldZ, currentDimension)));
-                            else if(i==5) {
-                                x = (int) (contextMenuWorldX-(this.width / scale) / 2);
-                                z = (int) (contextMenuWorldZ-(this.height / scale) / 2);
-                                onMouseMove(x, z);
-                                resetFeatures();
-                            }
-                        }
-                    }
-                }
-                renderContextMenu = false;
-            }
 
             // Check to see if a thing has been clicked
             for (int i = shownFeatures.length - 1; i >= 0; i--) {
@@ -394,11 +427,13 @@ public class FullScreenMap extends Screen {
                 }
             }
         }
+        mouseMoved(mbe.x(), mbe.y());
         return super.mouseReleased(mbe);
     }
 
     @Override
     public boolean mouseScrolled(double a, double b, double c, double d) {
+        stopCameraPan();
         int scroll = (int) Math.signum(d);
         if (scroll == 0) return super.mouseScrolled(a, b, c, d);
         // Get cursor position in world offset
@@ -429,12 +464,32 @@ public class FullScreenMap extends Screen {
 
     private int hoveredPlaceIndex;
     private int hoveredClaimIndex;
+    private PlayerFetch hoveredPlayer = null;
+
+    private boolean isCursorOverContextMenu(double mouseX, double mouseY) {
+        if (!renderContextMenu) return false;
+        return mouseX > contextMenuX
+                && mouseX < contextMenuX + bestContextMenuWidth
+                && mouseY > contextMenuY
+                && mouseY < contextMenuY + (minecraft.font.lineHeight * contextMenuItems.size()) + 1;
+    }
+
+    private void clearHoverState() {
+        hoveredPlaceIndex = -1;
+        hoveredClaimIndex = -1;
+        hoveredPlayer = null;
+        drawSponsorTooltip = false;
+    }
 
     @Override
     public void mouseMoved(double mouseX, double mouseY) {
-        // Reset hover states before recalculating what's under the cursor
-        hoveredPlaceIndex = -1;
-        hoveredClaimIndex = -1;
+        // Clear hover state first so dragging or opening the menu doesn't leave a stuck tooltip
+        clearHoverState();
+        // Freeze hover updates while dragging or hovering over the context menu
+        if (isMouseDown || isCursorOverContextMenu(mouseX, mouseY)) {
+            super.mouseMoved(mouseX, mouseY);
+            return;
+        }
 
         int tilesize = 1 << (17 - zoomlevel);
         double scale = (double) minimapTileSize / tilesize;
@@ -471,7 +526,7 @@ public class FullScreenMap extends Screen {
                     }
                 }
             }
-            if(hoveredPlaceIndex == -1) {
+            if (hoveredPlaceIndex == -1 && sp.showClaims && zoomlevel >= 8) {
                 for (int i = shownClaims.size() - 1; i >= 0; i--) {
                     ClaimMarkers claim = shownClaims.get(i);
                     if(claim.type.equals("polgyon")) continue;
@@ -487,10 +542,10 @@ public class FullScreenMap extends Screen {
 
             }
 
-            // Set text to draw coords to 
-            currentLocationCoordinates = Component.literal(String.format("%d, %d", (int) (x + (mouseX / scale)), (int) (z + (mouseY / scale))));
+            // Set text to draw coords, round (floor) now
+            currentLocationCoordinates = Component.literal(String.format("%d, %d", (int) Math.floor(x + (mouseX / scale)), (int) Math.floor(z + (mouseY / scale))));
         } else {
-            Component.literal("--, --");
+            currentLocationCoordinates = Component.literal("--, --");
         }
 
         super.mouseMoved(mouseX, mouseY);
@@ -500,21 +555,88 @@ public class FullScreenMap extends Screen {
 
     @Override
     public boolean mouseClicked(MouseButtonEvent mbe, boolean bl) {
-        if(renderContextMenu) {
-            if(!(
-                mbe.x() > contextMenuX && 
-                mbe.x() < contextMenuX + bestContextMenuWidth && 
-                mbe.y() > contextMenuY && 
-                mbe.y() < contextMenuY + (font.lineHeight * contextMenuItems.size()) + 1
-            )) {
+        stopCameraPan();
+        int tilesize = 1 << (17 - zoomlevel);
+        double scale = (double) minimapTileSize / tilesize;
+
+        if (renderContextMenu) {
+            if (mbe.button() == InputConstants.MOUSE_BUTTON_LEFT && isCursorOverContextMenu(mbe.x(), mbe.y())) {
+                int clickedIndex = (int) Math.floor((mbe.y() - contextMenuY) / minecraft.font.lineHeight);
+                if (clickedIndex >= 0 && clickedIndex < contextMenuItems.size()) {
+                    if (clickedIndex == 1 && contextMenuValues[1] == null) {
+                        return true;
+                    }
+                    if (clickedIndex < 4) {
+                        try {
+                            minecraft.keyboardHandler.setClipboard(contextMenuValues[clickedIndex]);
+                            LogUtils.debug("Copied to clipboard: " + contextMenuValues[clickedIndex]);
+                        } catch (Exception e) {
+                            LogUtils.error("Failed to copy to clipboard", e);
+                        }
+                        // TODO: Add feedback confirming something copied to clipboard
+                    } else if (clickedIndex == 4) {
+                        ConfirmLinkScreen.confirmLinkNow(null, URI.create(contextMenuValues[3]));
+                    } else if (clickedIndex == 5) {
+                        navToCoords(contextMenuWorldX, contextMenuWorldZ, true);
+                    }
+                }
                 renderContextMenu = false;
-            } 
+                mouseMoved(mbe.x(), mbe.y());
+                return true;
+            }
+            // Dismiss context menu on outside click and fall through as if menu wasn't open
+            renderContextMenu = false;
         }
-        isMouseDown = true;
-        hasMovedX = x;
-        hasMovedZ = z;
-        if (mbe.y() > (this.height - 28) && mbe.y() < (this.height - 3) && mbe.x() > 3 && mbe.x() < 196) {
-            ConfirmLinkScreen.confirmLinkNow(null, URI.create(sponsorURLString));
+
+        // Context menu opens on right-click.
+        // Note to self: mbe.isRight() is false no matter what
+        // Why is it like this!? (Note to Larry: mbe.isRight() checks the right arrow key)
+        if (!overlayOpen && mbe.button() == InputConstants.MOUSE_BUTTON_RIGHT && mbe.y() < this.height - bottomMapOffset) {
+            bestContextMenuWidth = 0;
+            // round (floor) picked world coords to whole blocks
+            contextMenuWorldX = (int) Math.floor(x + (mbe.x() / scale));
+            contextMenuWorldZ = (int) Math.floor(z + (mbe.y() / scale));
+
+            contextMenuValues[0] = String.format("%d, %d", contextMenuWorldX, contextMenuWorldZ);
+            contextMenuItems.set(0, "Copy: " + contextMenuValues[0]);
+
+            String oppositeDim = getOppositeDimension(currentDimension);
+            if (oppositeDim != null) {
+                double coordScale = currentDimension.equals("minecraft_the_nether") ? 8.0 : 1.0 / 8.0;
+                int linkedX = (int) Math.floor(contextMenuWorldX * coordScale);
+                int linkedZ = (int) Math.floor(contextMenuWorldZ * coordScale);
+                contextMenuValues[1] = String.format("%d, %d in %s", linkedX, linkedZ, pfu.prettyDimensionName(oppositeDim));
+                contextMenuItems.set(1, "Copy: " + contextMenuValues[1]);
+            } else {
+                contextMenuValues[1] = null;
+                contextMenuItems.set(1, "No linked dimension");
+            }
+
+            contextMenuValues[2] = String.format("%d, %d in %s", contextMenuWorldX, contextMenuWorldZ, pfu.prettyDimensionName(currentDimension));
+            contextMenuItems.set(2, "Copy: " + contextMenuValues[2]);
+            contextMenuValues[3] = String.format("%s?x=%d&z=%d&dimension=%s", NetworkUtils.BASE_URL, contextMenuWorldX, contextMenuWorldZ, currentDimension);
+
+            for (String item : contextMenuItems) {
+                bestContextMenuWidth = Math.max(bestContextMenuWidth, minecraft.font.width(item) + 8);
+            }
+            int menuHeight = (minecraft.font.lineHeight * contextMenuItems.size()) + 1;
+            contextMenuX = Math.max(5, Math.min(mbe.x(), this.width - bestContextMenuWidth - 5));
+            contextMenuY = Math.max(5, Math.min(mbe.y(), this.height - bottomMapOffset - menuHeight));
+            renderContextMenu = true;
+            clearHoverState();
+            return true;
+        }
+
+        if (mbe.button() == InputConstants.MOUSE_BUTTON_LEFT) {
+            isMouseDown = true;
+            hasMovedX = x;
+            hasMovedZ = z;
+            if (mbe.y() < this.height - bottomMapOffset) {
+                currentLocationCoordinates = Component.literal(String.format("%d, %d", (int) Math.floor(x + (mbe.x() / scale)), (int) Math.floor(z + (mbe.y() / scale))));
+            }
+            if (sponsorBanner != null && sponsorURLString != null && mbe.y() > (this.height - 28) && mbe.y() < (this.height - 3) && mbe.x() > 3 && mbe.x() < 196) {
+                ConfirmLinkScreen.confirmLinkNow(null, URI.create(sponsorURLString));
+            }
         }
         return super.mouseClicked(mbe, bl);
     }
@@ -708,6 +830,22 @@ public class FullScreenMap extends Screen {
                 }
             }
         } else {
+            // swoosh
+            if (cameraPan != null) {
+                if (cameraPan.isFinished()) {
+                    x = cameraPan.getTargetX();
+                    z = cameraPan.getTargetZ();
+                    cameraPan = null;
+                    onMouseMove(x, z);
+                    resetFeatures();
+                    resetClaims();
+                } else {
+                    // don't load tiles during pan, it can overload
+                    x = cameraPan.getX();
+                    z = cameraPan.getZ();
+                }
+            }
+
             int renderZoom = Math.min(8, zoomlevel);
             int renderTileSize = 1 << (17 - renderZoom);
             int drawSize = minimapTileSize * (1 << (zoomlevel - renderZoom));
@@ -808,7 +946,7 @@ public class FullScreenMap extends Screen {
                 }
             }
             // Draw claims
-            if(sp.showClaims) {
+            if (sp.showClaims && zoomlevel >= 8) {
                 for (int i = 0; i < shownClaims.size(); i++) {
                     ClaimMarkers claim = shownClaims.get(i);
                     if (claim.type.equals("rectangle")) {
@@ -901,7 +1039,9 @@ public class FullScreenMap extends Screen {
             }
 
             // Draw players
-            PlayerFetch hoveredPlayer = null;
+            if (!isMouseDown) {
+                hoveredPlayer = null;
+            }
             if (sp.showPlayers) {
                 ArrayList<PlayerFetch> playersList = pfu.getPlayers();
                 for (int i = 0; i < playersList.size(); i++) {
@@ -955,7 +1095,8 @@ public class FullScreenMap extends Screen {
                                 0, 0, 0, 0, 8, 8, 8, 8);
                         context.pose().popMatrix();
 
-                        if (mouseX > offsetFromLeft - 4 && mouseX < offsetFromLeft + 4 && mouseY > offsetFromTop - 4
+                        if (!isMouseDown && !isCursorOverContextMenu(mouseX, mouseY)
+                                && mouseX > offsetFromLeft - 4 && mouseX < offsetFromLeft + 4 && mouseY > offsetFromTop - 4
                                 && mouseY < offsetFromTop + 4) {
                             hoveredPlayer = player;
                         }
@@ -1008,7 +1149,7 @@ public class FullScreenMap extends Screen {
                     Component.literal(subText).withStyle(ChatFormatting.ITALIC, ChatFormatting.GRAY),
                     Component.literal("Ctrl+Click to share Coords").withStyle(ChatFormatting.ITALIC, ChatFormatting.GRAY)),
                     mouseX + 7, mouseY + 4);
-            } else if(hoveredClaimIndex != -1 && hoveredClaimIndex < shownClaims.size() && sp.showClaims) {
+            } else if(hoveredClaimIndex != -1 && hoveredClaimIndex < shownClaims.size() && sp.showClaims && zoomlevel >= 8) {
                 // And claims
                 String claimHoverOwner = shownClaims.get(hoveredClaimIndex).popup.substring(32).replace("</span>", "");
                 MapRenderUtils.drawTooltipComponent(context, List.of(
@@ -1048,17 +1189,27 @@ public class FullScreenMap extends Screen {
                     5, 30, 0, 0, 20, 20, 20, 20);
             GraphicsHelper.drawCenteredString(context, minecraft.font, String.format("%d", zoomlevel), 15, 35, 0xFFFFFFFF);
 
-            if(renderContextMenu) {
+            if (renderContextMenu) {
+                float pinScreenX = (float) ((contextMenuWorldX - x) * scale);
+                float pinScreenY = (float) ((contextMenuWorldZ - z) * scale);
+                if (pinScreenY < this.height - bottomMapOffset) {
+                    MapRenderUtils.drawPinMarker(context, pinScreenX, pinScreenY);
+                }
                 context.pose().pushMatrix();
-                context.pose().translate((float)contextMenuX, (float)contextMenuY);
-                context.fill(0, -1, bestContextMenuWidth, (contextMenuItems.size() * font.lineHeight) + 2,  0xaa3a3a3a);
+                context.pose().translate((float) contextMenuX, (float) contextMenuY);
+                context.fill(0, -1, bestContextMenuWidth, (contextMenuItems.size() * minecraft.font.lineHeight) + 2, 0xaa3a3a3a);
                 for (int i = 0; i < contextMenuItems.size(); i++) {
-                    if (mouseX > contextMenuX && mouseX < contextMenuX + bestContextMenuWidth &&
-                        mouseY > contextMenuY + (i*font.lineHeight) && mouseY < contextMenuY + (i*font.lineHeight) + font.lineHeight) {
-                        context.fill(0, (i*font.lineHeight) -1, bestContextMenuWidth, (i*font.lineHeight) + font.lineHeight -1, 0x3a000000);
+                    boolean isDisabled = (i == 1 && contextMenuValues[1] == null);
+                    if (!isDisabled && mouseX > contextMenuX && mouseX < contextMenuX + bestContextMenuWidth
+                            && mouseY > contextMenuY + (i * minecraft.font.lineHeight)
+                            && mouseY < contextMenuY + (i * minecraft.font.lineHeight) + minecraft.font.lineHeight) {
+                        context.fill(0, (i * minecraft.font.lineHeight) - 1, bestContextMenuWidth, (i * minecraft.font.lineHeight) + minecraft.font.lineHeight - 1, 0x3a000000);
                     }
 
-                    GraphicsHelper.drawString(context, font, contextMenuItems.get(i), (bestContextMenuWidth / 2) - (font.width( contextMenuItems.get(i)) / 2), i * font.lineHeight, 0xFFFFFFFF);
+                    int textColor = isDisabled ? 0xFF888888 : 0xFFFFFFFF;
+                    GraphicsHelper.drawString(context, minecraft.font, contextMenuItems.get(i),
+                            (bestContextMenuWidth / 2) - (minecraft.font.width(contextMenuItems.get(i)) / 2),
+                            i * minecraft.font.lineHeight, textColor);
                 }
 
                 context.pose().popMatrix();
@@ -1067,6 +1218,7 @@ public class FullScreenMap extends Screen {
     }
 
     private void changeMapScale(int zoomDelta, double coordScale) {
+        stopCameraPan();
         int oldtilesize = 1 << (17 - zoomlevel);
         double oldscale = (double) minimapTileSize / oldtilesize;
         double cx = x + (this.width / 2.0) / oldscale;
@@ -1078,8 +1230,20 @@ public class FullScreenMap extends Screen {
 
         int newtilesize = 1 << (17 - zoomlevel);
         double newscale = (double) minimapTileSize / newtilesize;
-        x = (int) (cx - (this.width / 2.0) / newscale);
-        z = (int) (cz - (this.height / 2.0) / newscale);
+        // don't round quite yet so we have smoother map movement
+        x = cx - (this.width / 2.0) / newscale;
+        z = cz - (this.height / 2.0) / newscale;
+    }
+
+    // don't re-center on spawn/player when resizing the window
+    private boolean mapPositioned = false;
+
+    @Override
+    public void removed() {
+        stopCameraPan();
+        isMouseDown = false;
+        mapPositioned = false;
+        super.removed();
     }
 
     private static final String[] DIMENSION_CYCLE = {
@@ -1106,6 +1270,7 @@ public class FullScreenMap extends Screen {
 
     @Override
     protected void init() {
+        isMouseDown = false;
         showFilters = false;
         currentDimension = "minecraft_" + CompatUtils.getIdentifier(Minecraft.getInstance().level.dimension()).getPath();
         Button filtersSave = Button.builder(Component.literal("Save"), (btn) -> {
@@ -1142,38 +1307,40 @@ public class FullScreenMap extends Screen {
         }).bounds(5, 90, 20, 20).tooltip(Tooltip.create(Component.literal("Filters"))).build();
 
         Button negZoomBtn = Button.builder(Component.nullToEmpty("-"), (btn) -> {
+            stopCameraPan();
             // Get current middle
             int oldtilesize = 1 << (17 - zoomlevel);
             double oldscale = (double) minimapTileSize / oldtilesize;
-            double oldMiddleX = (this.width / 2) / oldscale;
-            double oldMiddleZ = (this.height / 2) / oldscale;
+            double oldMiddleX = (this.width / 2.0) / oldscale;
+            double oldMiddleZ = (this.height / 2.0) / oldscale;
             zoomlevel -= 1;
             if (zoomlevel < minZoomLevel)
                 zoomlevel = minZoomLevel;
             // Set position to new x/z
             int newtilesize = 1 << (17 - zoomlevel);
             double newscale = (double) minimapTileSize / newtilesize;
-            double newMiddleX = (this.width / 2) / newscale;
-            double newMiddleZ = (this.height / 2) / newscale;
+            double newMiddleX = (this.width / 2.0) / newscale;
+            double newMiddleZ = (this.height / 2.0) / newscale;
             x -= (newMiddleX - oldMiddleX);
             z -= (newMiddleZ - oldMiddleZ);
             onMouseMove(x, z);
             resetClaims();
         }).bounds(5, 55, 20, 20).tooltip(Tooltip.create(Component.literal("Zoom out"))).build();
         Button posZoomBtn = Button.builder(Component.nullToEmpty("+"), (btn) -> {
+            stopCameraPan();
             // Get current middle
             int oldtilesize = 1 << (17 - zoomlevel);
             double oldscale = (double) minimapTileSize / oldtilesize;
-            double oldMiddleX = (this.width / 2) / oldscale;
-            double oldMiddleZ = (this.height / 2) / oldscale;
+            double oldMiddleX = (this.width / 2.0) / oldscale;
+            double oldMiddleZ = (this.height / 2.0) / oldscale;
             zoomlevel += 1;
             if (zoomlevel > maxZoomLevel)
                 zoomlevel = maxZoomLevel;
             // Set position to new x/z
             int newtilesize = 1 << (17 - zoomlevel);
             double newscale = (double) minimapTileSize / newtilesize;
-            double newMiddleX = (this.width / 2) / newscale;
-            double newMiddleZ = (this.height / 2) / newscale;
+            double newMiddleX = (this.width / 2.0) / newscale;
+            double newMiddleZ = (this.height / 2.0) / newscale;
             x -= (newMiddleX - oldMiddleX);
             z -= (newMiddleZ - oldMiddleZ);
             onMouseMove(x, z);
@@ -1232,29 +1399,24 @@ public class FullScreenMap extends Screen {
         this.addRenderableWidget(dimensionButton);
 
         Button goToMe = Button.builder(Component.literal(""), (btn) -> {
-            int tilesize = 1 << (17 - zoomlevel);
-            double scale = (double) minimapTileSize / tilesize;
-            x = (int) (minecraft.player.getBlockX()-(this.width / scale) / 2);
-            z = (int) (minecraft.player.getBlockZ()-(this.height / scale) / 2);
-            onMouseMove(x, z);
-            resetFeatures();
-
+            navToPlayer(true);
         }).tooltip(Tooltip.create(Component.literal("Go to Current Location"))).bounds(this.width - 25, this.height - bottomMapOffset - 25, 20, 20).build();
         this.addRenderableWidget(goToMe);
 
-        if(sp.bigMapPos == BigMapPos.CENTRE_ON_SPAWN) {
-            int tilesize = 1 << (17 - zoomlevel);
-            double scale = (double) minimapTileSize / tilesize;
-            x = (int) (-(this.width / scale) / 2);
-            z = (int) (-(this.height / scale) / 2);
-        } else if(sp.bigMapPos == BigMapPos.CENTRE_ON_PLAYER) {
-            int tilesize = 1 << (17 - zoomlevel);
-            double scale = (double) minimapTileSize / tilesize;
-            x = (int) (minecraft.player.getBlockX()-(this.width / scale) / 2);
-            z = (int) (minecraft.player.getBlockZ()-(this.height / scale) / 2);
+        if (!mapPositioned) {
+            if (sp.bigMapPos == BigMapPos.CENTRE_ON_SPAWN) {
+                navToCoords(0, 0, false);
+            } else if (sp.bigMapPos == BigMapPos.CENTRE_ON_PLAYER) {
+                navToPlayer(false);
+            } else {
+                onMouseMove(x, z);
+                resetFeatures();
+            }
+            mapPositioned = true;
+        } else {
+            onMouseMove(x, z);
+            resetFeatures();
         }
-        onMouseMove(x, z);
-        resetFeatures();
 
         this.addRenderableWidget(negZoomBtn);
         this.addRenderableWidget(posZoomBtn);
