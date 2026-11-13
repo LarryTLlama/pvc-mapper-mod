@@ -313,8 +313,8 @@ public class FullScreenMap extends Screen {
         "Copy Coords",
         "Copy Coords in Nether/T2",
         "Copy Coords + Dimension",
-        "Copy Link",
-        "Open on Web",
+        "Copy Web Link",
+        "Open on Web ↗",
         "Centre Map Here"
     ));
     String[] contextMenuValues = new String[contextMenuItems.size()];
