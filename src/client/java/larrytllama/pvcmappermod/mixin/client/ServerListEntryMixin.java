@@ -5,6 +5,7 @@ import org.spongepowered.asm.mixin.injection.*;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+import larrytllama.pvcmappermod.LogUtils;
 import larrytllama.pvcmappermod.PVCMapperModClient;
 import larrytllama.pvcmappermod.PreConnectScreen;
 import larrytllama.pvcmappermod.utils.CompatUtils;
@@ -35,7 +36,7 @@ public abstract class ServerListEntryMixin {
                         PVC_ALLOW_JOIN = true;
                         ((net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen) self).join(serverData);
                     } catch (Throwable t) {
-                        t.printStackTrace();
+                        LogUtils.error("Failed to join server after pre-connect notice", t);
                     }
                 });
             }));
