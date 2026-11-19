@@ -70,11 +70,7 @@ import net.minecraft.client.gui.narration.NarratableEntry;
 
 import java.util.ArrayList;
 
-import java.util.HashMap;
-
 import java.util.List;
-
-import java.util.Map;
 
 import java.util.Optional;
 
@@ -87,8 +83,6 @@ import net.minecraft.ChatFormatting;
 
 
 import net.minecraft.client.Minecraft;
-
-import net.minecraft.client.gui.Font;
 
 //? if <26.1 {
 
@@ -322,14 +316,13 @@ public class ShopsScreen extends Screen {
 
     @Override
     public boolean mouseClicked(MouseButtonEvent mbe, boolean bl) {
-        if (mbe.y() > (this.height - 28) && mbe.y() < (this.height - 3) && mbe.x() > 3 && mbe.x() < 196) {
+        if (mbe.button() == InputConstants.MOUSE_BUTTON_LEFT
+            && mbe.y() > (this.height - 28) && mbe.y() < (this.height - 3) && mbe.x() > 3 && mbe.x() < 196) {
             ConfirmLinkScreen.confirmLinkNow(null, java.net.URI.create(sponsorURLString));
         }
         return super.mouseClicked(mbe, bl);
     }
 
-    Map<String, ResIdentifier> tiles = new HashMap<>();
-    ResIdentifier blurredTile = ResIdentifier.of("pvcmappermod", "textures/gui/tileloading.png");
     ResIdentifier villagerImg = ResIdentifier.of("pvcmappermod", "textures/gui/villager.png");
 
 
@@ -346,17 +339,17 @@ public class ShopsScreen extends Screen {
 
         graphics.pose().translate(
 
-                x + (width / 2)
+                (float) (x + (width / 2)
 
                         - MapRenderUtils.worldToLocalTileCoordinate(coordX, 512)
 
-                        - 512,
+                        - 512),
 
-                y + (height / 2)
+                (float) (y + (height / 2)
 
                         - MapRenderUtils.worldToLocalTileCoordinate(coordZ, 512)
 
-                        - 512);
+                        - 512));
 
         for (int iX = 0; iX < 3; iX++) {
 
@@ -583,25 +576,9 @@ public class ShopsScreen extends Screen {
                     ItemStack hoveredItem = entry.getHoveredItemStack();
 
                     if (hoveredItem != null && !hoveredItem.isEmpty()) {
-
                         List<Component> tooltipLines = hoveredItem.getTooltipLines(Item.TooltipContext.EMPTY, Minecraft.getInstance().player, TooltipFlag.ADVANCED);
-
-                        int biggestLength = 0;
-
-                        for (int i = 0; i < tooltipLines.size(); i++) {
-
-                            biggestLength = Math.max(biggestLength, minecraft.font.width(tooltipLines.get(i)));
-
-                        }
-
-                        GraphicsHelper.drawTooltipBackground(graphics, mouseX + TooltipRenderUtil.MOUSE_OFFSET, (mouseY - TooltipRenderUtil.MOUSE_OFFSET), biggestLength, minecraft.font.lineHeight * tooltipLines.size());
-
-                        for (int i = 0; i < tooltipLines.size(); i++) {
-
-                            GraphicsHelper.drawString(graphics, minecraft.font, tooltipLines.get(i), mouseX + TooltipRenderUtil.MOUSE_OFFSET, (mouseY - TooltipRenderUtil.MOUSE_OFFSET) + (minecraft.font.lineHeight * i), 0xFFFFFFFF);
-
-                        }
-
+                        MapRenderUtils.drawTooltipComponent(graphics, tooltipLines, mouseX + TooltipRenderUtil.MOUSE_OFFSET,
+                            mouseY - TooltipRenderUtil.MOUSE_OFFSET);
                         break; // Only show one tooltip at a time
 
                     } else {

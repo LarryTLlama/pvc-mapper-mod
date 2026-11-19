@@ -1,60 +1,57 @@
 package larrytllama.pvcmappermod;
 
+import org.slf4j.Logger;
+
 public class LogUtils {
-    public static final String PREFIX = "PVC Mapper";
+    private static final Logger LOGGER = PVCMapperMod.LOGGER;
 
     public static void info(Object msg) {
-        System.out.println("[" + PREFIX + "/INFO] " + msg);
+        LOGGER.info("{}", msg);
     }
 
     public static void info(String format, Object... args) {
-        System.out.println("[" + PREFIX + "/INFO] " + String.format(format, args));
+        LOGGER.info(String.format(format, args));
     }
 
     public static void warn(Object msg) {
-        System.out.println("[" + PREFIX + "/WARN] " + msg);
+        LOGGER.warn("{}", msg);
     }
 
     public static void warn(String format, Object... args) {
-        System.out.println("[" + PREFIX + "/WARN] " + String.format(format, args));
+        LOGGER.warn(String.format(format, args));
     }
 
     public static void warn(String msg, Throwable e) {
-        System.out.println("[" + PREFIX + "/WARN] " + msg);
-        e.printStackTrace();
+        LOGGER.warn(msg, e);
     }
 
     public static void error(Object msg) {
-        System.err.println("[" + PREFIX + "/ERROR] " + msg);
+        LOGGER.error("{}", msg);
     }
 
     public static void error(String msg, Throwable e) {
-        System.err.println("[" + PREFIX + "/ERROR] " + msg);
-        e.printStackTrace();
+        LOGGER.error(msg, e);
     }
 
     public static void error(String format, Object... args) {
-        System.err.println("[" + PREFIX + "/ERROR] " + String.format(format, args));
+        LOGGER.error(String.format(format, args));
     }
 
     public static void debug(Object msg) {
-        SettingsProvider sp = SettingsProvider.getInstance();
-        if (sp != null && sp.debugMode) {
-            System.out.println("[" + PREFIX + "/DEBUG] " + msg);
-        }
-    }
-
-    public static void debug(String msg) {
-        SettingsProvider sp = SettingsProvider.getInstance();
-        if (sp != null && sp.debugMode) {
-            System.out.println("[" + PREFIX + "/DEBUG] " + msg);
+        if (isDebugEnabled()) {
+            // Route through INFO so the in-game debugMode toggle appears in console/latest.log under default Log4j levels
+            LOGGER.info("[DEBUG] {}", msg);
         }
     }
 
     public static void debug(String format, Object... args) {
-        SettingsProvider sp = SettingsProvider.getInstance();
-        if (sp != null && sp.debugMode) {
-            System.out.println("[" + PREFIX + "/DEBUG] " + String.format(format, args));
+        if (isDebugEnabled()) {
+            LOGGER.info("[DEBUG] {}", String.format(format, args));
         }
+    }
+
+    private static boolean isDebugEnabled() {
+        SettingsProvider sp = SettingsProvider.getInstance();
+        return sp != null && sp.debugMode;
     }
 }

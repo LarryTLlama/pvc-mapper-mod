@@ -1,8 +1,6 @@
 package larrytllama.pvcmappermod;
 import larrytllama.pvcmappermod.utils.*;
 
-import larrytllama.pvcmappermod.utils.ResIdentifier;
-
 import java.lang.reflect.Type;
 import java.net.URI;
 import java.util.Locale;
@@ -102,11 +100,11 @@ public class ShopsHandler {
                     return new Shop[0];
                 })
                 .exceptionally(e -> {
-                    e.printStackTrace();
+                    LogUtils.error("Failed to fetch shops by item", e);
                     return new Shop[0];
                 });
         } catch(Exception e) {
-            e.printStackTrace();
+            LogUtils.error("Failed to fetch shops by item", e);
             return CompletableFuture.completedFuture(new Shop[0]);
         }
     }
@@ -129,12 +127,10 @@ public class ShopsHandler {
                 })
                 .exceptionally(e -> {
                     LogUtils.error("Failed to fetch shops by player", e);
-                    e.printStackTrace();
                     return new Shop[0];
                 });
         } catch(Exception e) {
             LogUtils.error("Failed to fetch shops by player", e);
-            e.printStackTrace();
             return CompletableFuture.completedFuture(new Shop[0]);
         }
     }
@@ -155,11 +151,11 @@ public class ShopsHandler {
                     return new ShopsPlayerStats();
                 })
                 .exceptionally(e -> {
-                    e.printStackTrace();
+                    LogUtils.error("Failed to fetch player shop stats", e);
                     return new ShopsPlayerStats();
                 });
         } catch(Exception e) {
-            e.printStackTrace();
+            LogUtils.error("Failed to fetch player shop stats", e);
             return CompletableFuture.completedFuture(new ShopsPlayerStats());
         }
     }
@@ -218,12 +214,7 @@ public class ShopsHandler {
         as.entity = entity.getType().toString();
         as.shopName = merchantScreen.getTitle().getString();
         as.location = String.format("%d, %d, %d", entity.getBlockX(), entity.getBlockY(), entity.getBlockZ());
-        as.world = entity.level().dimension()
-            //? if <1.21.11 {
-            .location()
-            //?}else{
-            /*.identifier()*///?}
-            .toString();
+        as.world = CompatUtils.getIdentifier(entity.level().dimension()).toString();
         MerchantOffers mos = merchantScreen.getMenu().getOffers();
         as.recipes = new AdminShopRecipe[mos.size()];
         int i = 0;
@@ -272,11 +263,11 @@ public class ShopsHandler {
                     return new CustomItem[0];
                 })
                 .exceptionally(e -> {
-                    e.printStackTrace();
+                    LogUtils.error("Failed to fetch custom items", e);
                     return new CustomItem[0];
                 });
         } catch(Exception e) {
-            e.printStackTrace();
+            LogUtils.error("Failed to fetch custom items", e);
             return CompletableFuture.completedFuture(new CustomItem[0]);
         }
     }

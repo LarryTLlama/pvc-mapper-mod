@@ -13,6 +13,7 @@ import java.util.List;
 import net.minecraft.client.gui.screens.inventory.tooltip.TooltipRenderUtil;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 
 public class MapRenderUtils {
@@ -188,6 +189,23 @@ public class MapRenderUtils {
         double y= Math.sin(longDiff)*Math.cos(latitude2);
         double x=Math.cos(latitude1)*Math.sin(latitude2)-Math.sin(latitude1)*Math.cos(latitude2)*Math.cos(longDiff);    
         return (Math.toDegrees(Math.atan2(y, x))+360)%360;
+    }
+
+    public static final ResIdentifier TARGET_POINT = ResIdentifier.of("minecraft",
+            "textures/map/decorations/target_point.png");
+
+    public static void drawPinMarker(
+        //? if <26.1 {
+        GuiGraphics
+        //?} else {
+        /*GuiGraphicsExtractor*///?}
+        context, float screenX, float screenY) {
+        context.pose().pushMatrix();
+        context.pose().translate(screenX, screenY);
+        // Center 7px-wide arrow and place bottom tip on point
+        context.pose().translate(-4.5f, -8.0f);
+        context.blit(RenderPipelines.GUI_TEXTURED, TARGET_POINT.get(), 0, 0, 0, 0, 8, 8, 8, 8);
+        context.pose().popMatrix();
     }
 }
 
